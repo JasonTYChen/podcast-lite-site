@@ -1,5 +1,5 @@
 {
-  "total": 88,
+  "total": 87,
   "items": [
     {
       "ep_id": "statementdog/statementdog-2026-08-28-S8LEfBq6s2Q",
@@ -1610,19 +1610,6 @@
         "SOX"
       ],
       "source_url": "https://www.youtube.com/watch?v=CmmkxEekO7Q"
-    },
-    {
-      "ep_id": "mk/gooaye-ep0676",
-      "title": "EP676 | 🐬",
-      "date": "2026-07-04",
-      "podcaster": "mk",
-      "tw_tickers": [
-        "2330",
-        "2454",
-        "0050"
-      ],
-      "us_tickers": [],
-      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/2d7b77d8-c828-43f9-b835-5a1a72aa2e38"
     }
   ]
 }

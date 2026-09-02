@@ -126,6 +126,34 @@
     font-size: 0.875rem;
   }
 
+  /* ── 卡片標頭列的窄螢幕換行（手機排版修正）───────────────────────────
+     問題：標頭列是 flex，左為標題、右為「標籤＋來源＋深入解讀」群組，
+     而右群組帶 flex-shrink:0。窄螢幕下右群組可達 278px，吃掉整列寬度，
+     留給標題的空間只剩 ~37px；flex item 的 min-width 預設為 auto，對
+     中文會退到單字寬，於是標題被壓成一字一行的直排，右群組還會溢出
+     容器（實測 390px 視窗溢出 20px，「深入解讀」按鈕被切掉）。
+
+     解法不用硬寫斷點——右群組寬度會隨標籤字數變動，斷點必然猜不準。
+     改為給標題一個彈性基準寬（12rem）：容器塞得下「標題 12rem ＋ 右群組」
+     時維持原本的左右並排；塞不下就整列換行，標題獨佔一行、右群組移到
+     下一行。min-width:0 解除 auto 最小寬，才不會反過來撐破容器。 */
+  .card-head { flex-wrap: wrap; }
+  .card-head > :first-child {
+    flex: 1 1 12rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  /* 右群組本身也要能換行，否則極窄裝置下仍會溢出：它帶 flex-shrink:0，
+     寬度會固定在 max-content（＝所有子元素寬度總和），單靠 flex-wrap
+     永遠不會觸發內部換行。需同時解除 shrink 限制並封頂寬度，子元素
+     （標籤／來源／深入解讀按鈕）才會依實際可用寬度落到下一行。 */
+  .card-head-meta {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+
   /* ── 卡片渲染鏈自訂樣式（T-804，逐字移植自 public/index.html:121-122, 471-479）── */
   .signal-card { transition: box-shadow 0.15s, transform 0.15s; }
   .signal-card:hover { box-shadow: 0 4px 20px rgba(30,58,138,0.10); transform: translateY(-1px); }

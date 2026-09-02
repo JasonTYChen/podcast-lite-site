@@ -149,9 +149,9 @@ function _renderNewsEvents(events, epId, startIndex = 0) {
     ev = _asObject(ev);
     return `
     <div class="bg-slate-50 rounded-xl p-3 space-y-1">
-      <div class="flex items-start justify-between gap-2">
+      <div class="card-head flex items-start justify-between gap-2">
         <span class="text-xs font-bold text-slate-800">${escHtml(ev.標題 || '')}</span>
-        <div class="flex items-center gap-1 flex-shrink-0">
+        <div class="card-head-meta flex items-center gap-1 flex-shrink-0">
           ${ev.標籤 ? `<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-medium">${escHtml(ev.標籤)}</span>` : ''}
           ${_srcBadge(ev.來源)}
           ${epId ? `<button class="dd-more-btn" data-action="open-deep-dive" data-ep-id="${escHtml(epId)}" data-block-id="news-${startIndex + i}">深入解讀</button>` : ''}
@@ -173,9 +173,9 @@ function _renderIndustry(industries, epId, startIndex = 0) {
     const kp = _asObject(ind.卡片重點);
     return `
     <div class="border border-slate-200 rounded-xl overflow-hidden">
-      <div class="px-3 py-2 bg-slate-800 flex items-center justify-between gap-2">
+      <div class="card-head px-3 py-2 bg-slate-800 flex items-center justify-between gap-2">
         <span class="text-xs font-bold text-white">${escHtml(ind.標題 || '')}</span>
-        <div class="flex items-center gap-1 flex-shrink-0">
+        <div class="card-head-meta flex items-center gap-1 flex-shrink-0">
           ${ind.標籤 ? `<span class="px-1.5 py-0.5 rounded bg-slate-600 text-slate-200 text-xs">${escHtml(ind.標籤)}</span>` : ''}
           ${_srcBadge(ind.來源)}
           ${epId ? `<button class="dd-more-btn" data-action="open-deep-dive" data-ep-id="${escHtml(epId)}" data-block-id="industry-${startIndex + i}">深入解讀</button>` : ''}
@@ -232,9 +232,9 @@ function _renderQA(qas, epId, startIndex = 0) {
     }).join('');
     return `
     <div class="bg-blue-50 rounded-xl p-3 space-y-2">
-      <div class="flex items-start justify-between gap-2">
+      <div class="card-head flex items-start justify-between gap-2">
         <div class="text-xs font-bold text-blue-800">${escHtml(qa.標題 || '')}</div>
-        <div class="flex items-center gap-1 flex-shrink-0">
+        <div class="card-head-meta flex items-center gap-1 flex-shrink-0">
           ${_srcBadge(qa.來源)}
         </div>
       </div>

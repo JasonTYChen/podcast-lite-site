@@ -1,0 +1,117 @@
+/* lite/assets/tailwind-lite.css — T-802 靜態子集 */
+/* 來源：卡片渲染鏈（public/index.html:2501-2716）與深入解讀鏈
+   （public/index.html:1888-2455）實際用到的 111 個 Tailwind
+   utility class，逐條對照 Tailwind CSS v3 官方預設 theme 手寫，
+   非 CDN 抓取、非機器產生。詳見 T-802 回報的來源與校驗值。 */
+
+.bg-amber-50 { background-color: #fffbeb; }
+.bg-blue-100 { background-color: #dbeafe; }
+.bg-blue-50 { background-color: #eff6ff; }
+.bg-green-100 { background-color: #dcfce7; }
+.bg-green-50 { background-color: #f0fdf4; }
+.bg-red-100 { background-color: #fee2e2; }
+.bg-red-50 { background-color: #fef2f2; }
+.bg-slate-100 { background-color: #f1f5f9; }
+.bg-slate-50 { background-color: #f8fafc; }
+.bg-slate-600 { background-color: #475569; }
+.bg-slate-800 { background-color: #1e293b; }
+.bg-slate-900 { background-color: #0f172a; }
+.bg-white { background-color: #ffffff; }
+.text-amber-600 { color: #d97706; }
+.text-amber-700 { color: #b45309; }
+.text-blue-300 { color: #93c5fd; }
+.text-blue-500 { color: #3b82f6; }
+.text-blue-700 { color: #1d4ed8; }
+.text-blue-800 { color: #1e40af; }
+.text-blue-900 { color: #1e3a8a; }
+.text-green-600 { color: #16a34a; }
+.text-green-700 { color: #15803d; }
+.text-red-600 { color: #dc2626; }
+.text-red-700 { color: #b91c1c; }
+.text-slate-200 { color: #e2e8f0; }
+.text-slate-400 { color: #94a3b8; }
+.text-slate-500 { color: #64748b; }
+.text-slate-600 { color: #475569; }
+.text-slate-700 { color: #334155; }
+.text-slate-800 { color: #1e293b; }
+.text-slate-900 { color: #0f172a; }
+.text-white { color: #ffffff; }
+.border { border-width: 1px; border-style: solid; border-color: #e5e7eb; }
+.border-b { border-bottom-width: 1px; border-bottom-style: solid; border-bottom-color: #e5e7eb; }
+.border-l-4 { border-left-width: 4px; border-left-style: solid; border-left-color: #e5e7eb; }
+.border-dashed { border-style: dashed; }
+.border-amber-200 { border-color: #fde68a; }
+.border-blue-700 { border-color: #1d4ed8; }
+.border-green-200 { border-color: #bbf7d0; }
+.border-red-200 { border-color: #fecaca; }
+.border-slate-100 { border-color: #f1f5f9; }
+.border-slate-200 { border-color: #e2e8f0; }
+.hover\:border-slate-400:hover { border-color: #94a3b8; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.grid { display: grid; }
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.flex-1 { flex: 1 1 0%; }
+.flex-col { flex-direction: column; }
+.flex-shrink-0 { flex-shrink: 0; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: 0.25rem; }
+.gap-1.5 { gap: 0.375rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-x-4 { column-gap: 1rem; }
+.gap-y-1 { row-gap: 0.25rem; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-1.5 { margin-bottom: 0.375rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.ml-1 { margin-left: 0.25rem; }
+.mt-0.5 { margin-top: 0.125rem; }
+.mt-1 { margin-top: 0.25rem; }
+.pt-1 { padding-top: 0.25rem; }
+.p-3 { padding: 0.75rem; }
+.p-5 { padding: 1.25rem; }
+.px-1.5 { padding-left: 0.375rem; padding-right: 0.375rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+.py-0.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-6 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
+.space-y-0.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.125rem; }
+.space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.25rem; }
+.space-y-1.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.375rem; }
+.space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
+.space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem; }
+.min-w-\[80px\] { min-width: 80px; }
+.rounded { border-radius: 0.25rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-2xl { border-radius: 1rem; }
+.rounded-full { border-radius: 9999px; }
+.rounded-r-xl { border-top-right-radius: 0.75rem; border-bottom-right-radius: 0.75rem; }
+.shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+.overflow-hidden { overflow: hidden; }
+.cursor-pointer { cursor: pointer; }
+.transition-colors { transition-property: color, background-color, border-color, text-decoration-color, fill, stroke; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-center { text-align: center; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.italic { font-style: italic; }
+.uppercase { text-transform: uppercase; }
+.tracking-wider { letter-spacing: 0.05em; }
+.leading-relaxed { line-height: 1.625; }
+.leading-snug { line-height: 1.375; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.divide-y > :not([hidden]) ~ :not([hidden]) { border-top-width: 1px; border-top-style: solid; }
+.divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #f1f5f9; }
+.last\:border-0:last-child { border-width: 0; }

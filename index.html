@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
+<title>Podcast 財經導讀站</title>
+<link rel="stylesheet" href="./assets/tailwind-lite.css">
+<style>
+  /* ── 站台外殼樣式（非 Tailwind，逐條可審查）───────────────────────── */
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+      "Microsoft JhengHei", sans-serif;
+  }
+  a { color: inherit; }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 12px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  .site-header .brand {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+  .site-header .brand-sub {
+    font-size: 0.7rem;
+    color: #94a3b8;
+  }
+
+  /* ── podcaster 篩選 chip（T-1205，spec-012 §7.1/§7.2）────────────────
+     顯示 slug 大寫（使用者裁決，不新增中文對照表、不動卡片）。
+     容器固定位於 .site-header 內——不得放進 #site-main，因
+     _renderCardList／_renderEmptyState 會覆寫 #site-main 整個
+     innerHTML（SPEC-011 已驗證此契約，spec-012 §7.5）。 */
+  #podcaster-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .podcaster-chip {
+    border: 1px solid #334155;
+    background: transparent;
+    color: #cbd5e1;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+  }
+  .podcaster-chip:hover {
+    border-color: #64748b;
+    color: #e2e8f0;
+  }
+  .podcaster-chip[aria-pressed="true"] {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .site-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 16px 64px;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* ── 卡片容器（T-1101，spec-011 S-1/S-2）─────────────────────────────
+     預設（<900px）單欄；≥900px 由下方 media query 切為雙欄。
+     Grid 逐列填（非「auto-flow 設為 column」、非 CSS 多欄排版屬性），DOM 順序
+     即閱讀順序，左→右→下一列嚴格對應 index.json 的日期倒序（spec §7.2）。
+     align-items:start 讓卡片各自維持原生高度，不被拉伸等高（spec §7.3，
+     避免卡片內部 padding／區塊間距被撐開而牴觸 DoD-2）。 */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .site-footer {
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 24px 20px 32px;
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
+  .site-footer .footer-inner {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .site-footer a {
+    color: #93c5fd;
+    text-decoration: underline;
+  }
+  .site-footer .footer-disclaimer {
+    margin-bottom: 12px;
+    color: #cbd5e1;
+  }
+  .site-footer .footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 64px 16px;
+    color: #94a3b8;
+    font-size: 0.875rem;
+  }
+
+  /* ── 卡片渲染鏈自訂樣式（T-804，逐字移植自 public/index.html:121-122, 471-479）── */
+  .signal-card { transition: box-shadow 0.15s, transform 0.15s; }
+  .signal-card:hover { box-shadow: 0 4px 20px rgba(30,58,138,0.10); transform: translateY(-1px); }
+
+  .dd-more-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 5px;
+    border: 1px solid #CBD5E1; background: #F8FAFC;
+    font-size: 11px; font-weight: 600; color: #475569;
+    cursor: pointer; transition: background .12s;
+    white-space: nowrap;
+  }
+  .dd-more-btn:hover { background: #E2E8F0; }
+
+  /* ── 深入解讀 Modal 樣式（T-806，逐字移植自 public/index.html:120-438）── */
+  :root {
+    --dd-bg: #F8FAFC;
+    --dd-surface: #FFFFFF;
+    --dd-border: #E2E8F0;
+    --dd-accent: #6366F1;
+    --dd-violet: #8B5CF6;
+    --dd-emerald: #10B981;
+    --dd-amber: #F59E0B;
+  }
+
+  .dd-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 9999;
+    display: flex; align-items: stretch; justify-content: center;
+  }
+  .dd-modal {
+    width: 100%; max-width: 1400px;
+    height: 100vh;
+    display: flex; flex-direction: column;
+    background: var(--dd-bg);
+    overflow: hidden;
+    box-shadow: -4px 0 32px rgba(0,0,0,.2);
+  }
+  .dd-grid {
+    flex: 1;
+    display: grid;
+    /* 恆為三軌＋一條左中欄拖拉分隔線（收摺時右欄壓縮為 0% 而非移除軌道，
+       瀏覽器才能對 grid-template-columns 做平滑補間，避免中欄輸入框跳動（T-109）。
+       左中欄比例可由使用者拖拉調整，拖拉時以 inline style 覆蓋此處預設值。
+       D 區（對話功能）已 physically 移除，中欄恆為空，故左欄改為全寬、
+       中欄與拖拉分隔線軌道歸零，避免右側 75% 留白（與下方 #dd-col-resizer
+       的 display:none 相呼應）。 */
+    grid-template-columns: 100% 0 0 0;
+    transition: grid-template-columns .25s ease;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .dd-grid.dd-grid-notebook-open {
+    grid-template-columns: 25% 5px 41.7% 33.3%;
+  }
+  .dd-col-left, .dd-col-center, .dd-col-right {
+    overflow-y: auto; overflow-x: hidden;
+    min-height: 0;
+  }
+  .dd-col-left { border-right: 1px solid #E5E7EB; }
+  .dd-col-center { border-right: 1px solid #E5E7EB; }
+  .dd-col-resizer {
+    /* 軌道已於 .dd-grid 歸零，這裡另外 display:none，雙重確保不留下可
+       hover／可聚焦的殘影（元素隱藏後無法收到 mousedown，
+       _ddInitColumnResizer 的拖曳監聽器自然失效）。 */
+    display: none;
+    width: 5px;
+    cursor: col-resize;
+    background: transparent;
+    position: relative;
+    z-index: 5;
+  }
+  .dd-col-resizer:hover, .dd-col-resizer.dd-resizing {
+    background: var(--dd-accent, #6366F1);
+  }
+  .dd-grid.dd-resizing { transition: none; user-select: none; }
+  .dd-grid.dd-resizing .dd-col-left,
+  .dd-grid.dd-resizing .dd-col-center,
+  .dd-grid.dd-resizing .dd-col-right { pointer-events: none; }
+  .dd-notebook-toggle {
+    flex-shrink: 0; width: 27px; height: 27px; margin-right: 4px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; cursor: pointer;
+    border-radius: 5px; color: #64748B; font-size: 13px;
+    transition: background .12s, color .12s;
+  }
+  .dd-notebook-toggle:hover { background: var(--dd-border); color: #0F172A; }
+  .dd-notebook-toggle.active { color: var(--dd-accent); }
+  .dd-header {
+    background: var(--dd-surface);
+    border-bottom: 1px solid var(--dd-border);
+    position: sticky; top: 0; z-index: 20;
+    padding: 13px 20px 11px;
+    flex-shrink: 0;
+  }
+  .dd-header-row {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 10px;
+    margin-bottom: 7px;
+  }
+  .dd-header-left { flex: 1; }
+  .dd-meta {
+    display: flex; align-items: center;
+    gap: 7px; flex-wrap: wrap; margin-bottom: 4px;
+  }
+  .dd-meta-tag {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase; color: #64748B;
+  }
+  .dd-block-chip {
+    padding: 2px 7px; border-radius: 3px;
+    border: 1px solid var(--dd-border);
+    font-size: 10px; font-weight: 600; color: #64748B;
+  }
+  .dd-src-mono {
+    font-family: monospace; font-size: 10px; color: #4B5563;
+  }
+  .dd-title {
+    font-size: 14px; font-weight: 700;
+    color: #0F172A; line-height: 1.4;
+  }
+  .dd-close {
+    flex-shrink: 0; width: 27px; height: 27px;
+    display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; cursor: pointer;
+    border-radius: 5px; color: #6B7280; font-size: 15px;
+    transition: background .12s, color .12s;
+  }
+  .dd-close:hover { background: var(--dd-border); color: #0F172A; }
+  .dd-lead {
+    border-left: 2px solid var(--dd-border);
+    padding-left: 10px;
+    font-size: 12px; color: #64748B; line-height: 1.55;
+  }
+  .dd-lead strong { color: #334155; }
+  .dd-col-left::-webkit-scrollbar, .dd-col-center::-webkit-scrollbar, .dd-col-right::-webkit-scrollbar { width: 3px; }
+  .dd-col-left::-webkit-scrollbar-thumb, .dd-col-center::-webkit-scrollbar-thumb, .dd-col-right::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
+  .dd-zone-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: #F1F5F9;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 6px 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dd-zone-id {
+    font-size: 9px; font-weight: 800;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: #9CA3AF; background: #E5E7EB;
+    padding: 1px 5px; border-radius: 3px;
+  }
+  .dd-zone-name { font-size: 11px; font-weight: 600; color: #6B7280; }
+  .dd-zone-right {
+    margin-left: auto; font-size: 10px;
+    color: #9CA3AF; font-family: monospace;
+  }
+  .dd-zone-a { padding: 16px 20px 20px; }
+  .dd-fh {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #9CA3AF; margin-bottom: 5px;
+  }
+  .dd-prose {
+    font-size: 13px; line-height: 1.78; color: #111827;
+  }
+  .dd-divider { height: 1px; background: #E5E7EB; margin: 14px 0; }
+  .dd-hl-box {
+    border-left: 3px solid #9CA3AF;
+    padding: 9px 12px; background: #F1F5F9;
+    border-radius: 0 5px 5px 0;
+    font-size: 13px; line-height: 1.72; color: #111827;
+  }
+  .dd-warn-box {
+    border: 1px solid var(--dd-amber); background: #FFFBEB;
+    border-radius: 6px; padding: 9px 12px;
+    font-size: 12px; line-height: 1.65; color: #92400E;
+  }
+  .dd-box-trend {
+    border-left: 3px solid var(--dd-emerald);
+    padding: 9px 12px; background: #ECFDF5;
+    border-radius: 0 5px 5px 0;
+    font-size: 13px; line-height: 1.72; color: #065F46;
+  }
+  .dd-box-host {
+    border-left: 3px solid var(--dd-violet);
+    padding: 9px 12px; background: #F5F3FF;
+    border-radius: 0 5px 5px 0;
+    font-size: 13px; line-height: 1.72; color: #5B21B6;
+  }
+  .dd-capture-btn {
+    flex-shrink: 0; margin-left: auto; border: 1px solid var(--dd-border); background: var(--dd-surface);
+    border-radius: 5px; padding: 3px 8px; font-size: 10px; color: #64748B;
+    cursor: pointer; transition: transform .12s ease, border-color .12s ease;
+  }
+  .dd-capture-btn:hover { transform: scale(1.06); border-color: var(--dd-accent); color: var(--dd-accent); }
+  .dd-zone-b { background: #F1F5F9; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
+  .dd-drift-bar {
+    padding: 5px 20px; border-bottom: 1px solid #E5E7EB;
+    font-size: 10px; color: #9CA3AF; font-style: italic;
+  }
+  .dd-tsec { padding: 10px 20px; }
+  .dd-tsec-head {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #9CA3AF; margin-bottom: 5px;
+  }
+  .dd-tsec-matched .dd-tsec-head { color: #6B7280; }
+  .dd-tsec-text {
+    font-family: 'JetBrains Mono','Fira Code',Consolas,monospace;
+    font-size: 11.5px; line-height: 1.85;
+    color: #9CA3AF;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .dd-tsec-matched .dd-tsec-text { color: #111827; }
+  .dd-tsep { height: 1px; background: #E5E7EB; margin: 0 20px; }
+  .dd-zone-c { padding: 16px 20px 26px; }
+  .dd-zone-coverage-wrap { border-top: 1px solid #E5E7EB; }
+  .dd-zone-coverage { padding: 16px 20px 26px; }
+  .dd-coverage-meta {
+    font-size: 11px; color: #6B7280; margin-bottom: 14px;
+  }
+  .dd-coverage-stale { color: #B45309; font-weight: 600; }
+  .dd-coverage-badge {
+    padding: 12px 20px; font-size: 12px; color: #9CA3AF;
+    border-top: 1px solid #E5E7EB;
+  }
+  .dd-ai-notice {
+    border: 1px solid #FDE68A; background: #FEFCE8;
+    border-radius: 6px; padding: 8px 12px;
+    font-size: 11px; color: #374151; line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .dd-af { margin-bottom: 16px; }
+  .dd-af:last-child { margin-bottom: 0; }
+  .dd-afh {
+    font-size: 9px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: #9CA3AF; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dd-afh::after { content: ''; flex: 1; height: 1px; background: #E5E7EB; }
+  .dd-afb { font-size: 13px; line-height: 1.78; color: #111827; }
+  .dd-afb-lg { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.45; }
+  .dd-supply-grid {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-top: 4px;
+  }
+  .dd-supply-card {
+    border: 1px solid #E5E7EB; border-radius: 6px;
+    padding: 9px 10px; background: #ffffff;
+    cursor: pointer; transition: border-color .15s ease;
+  }
+  .dd-supply-card:hover { border-color: #818CF8; }
+  .dd-sc-head {
+    font-size: 9px; font-weight: 700;
+    color: #9CA3AF; letter-spacing: .08em; margin-bottom: 5px;
+  }
+  .dd-sc-body { font-size: 11px; color: #6B7280; line-height: 1.55; }
+  .dd-chain-pos {
+    display: flex; align-items: center; margin: 6px 0;
+  }
+  .dd-chain-seg {
+    flex: 1; text-align: center;
+    padding: 7px 4px; border: 1px solid #E5E7EB;
+    font-size: 10px; color: #9CA3AF;
+  }
+  .dd-chain-seg.active {
+    background: #F1F5F9; color: #111827;
+    font-weight: 700; border-color: #6B7280;
+  }
+  .dd-chain-seg:first-child { border-radius: 5px 0 0 5px; }
+  .dd-chain-seg:last-child { border-radius: 0 5px 5px 0; }
+  .dd-chain-seg + .dd-chain-seg { border-left: none; }
+  .dd-watch-list { list-style: none; }
+  .dd-watch-list li {
+    display: flex; align-items: flex-start; gap: 7px;
+    font-size: 12px; line-height: 1.65;
+    color: #111827; padding: 4px 0;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .dd-watch-list li:last-child { border-bottom: none; }
+  .dd-watch-list li::before {
+    content: '›'; color: #9CA3AF; flex-shrink: 0;
+    margin-top: 1px; font-size: 14px;
+  }
+  .dd-footer-line {
+    font-size: 11px; color: #9CA3AF;
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid #E5E7EB;
+  }
+  .dd-footer {
+    flex-shrink: 0;
+    border-top: 1px solid #E5E7EB;
+    padding: 7px 20px;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+    background: #ffffff;
+  }
+  .dd-footer-note { font-size: 10px; color: #9CA3AF; }
+  .dd-footer-id { font-size: 10px; color: #9CA3AF; font-family: monospace; }
+  /* 深入解讀按鈕（加在現有卡片裡） */
+
+  /* ── 雙欄斷點（T-1101，spec-011 §7.1）───────────────────────────────
+     ≥900px：卡片容器轉為兩欄，.site-main 容納寬度放寬至 1200px。
+     900px 為邊界值本身即屬雙欄（min-width 語意）。 */
+  @media (min-width: 900px) {
+    .card-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .site-main {
+      max-width: 1200px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── 站台標頭 ─────────────────────────────────────────────────────── -->
+<header class="site-header" id="site-header">
+  <div>
+    <div class="brand">Podcast 財經導讀站</div>
+    <div class="brand-sub">非官方第三方專案・AI 生成摘要</div>
+  </div>
+  <div style="flex:1"></div>
+  <!-- podcaster 篩選 chip（T-1205）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
+  <div id="podcaster-chips"></div>
+  <!-- 週別篩選（T-805）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
+  <select id="week-select" class="text-xs" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;"></select>
+</header>
+
+<!-- ── 內容容器：由 T-804（卡片）／T-805（導航）／T-806（深入解讀）填入 ── -->
+<main class="site-main" id="site-main">
+  <div class="empty-state" id="empty-state">內容載入中…</div>
+</main>
+
+<!-- ── Footer（T-808）：免責、非官方標示、版權反映管道 ─────────────── -->
+<footer class="site-footer" id="site-footer">
+  <div class="footer-inner">
+    <div class="footer-disclaimer" id="footer-disclaimer">
+      本站為第三方非官方專案，與任何節目、主持人或製作單位皆無隸屬或合作關係。
+      內容由 AI 自動生成，可能有誤，<strong>不構成投資建議</strong>，請自行查證判斷，投資風險請自負。
+    </div>
+    <div class="footer-links" id="footer-links">
+      <a href="./about.html">關於本站</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Deep Dive Modal（T-806，逐字移植自 public/index.html:3190-3219）── -->
+<div id="dd-overlay" class="dd-overlay" style="display:none;" aria-modal="true" role="dialog">
+  <div class="dd-modal" id="dd-modal">
+    <!-- 頭部（近黑色固定） -->
+    <div class="dd-header" id="dd-header">
+      <div class="dd-header-row">
+        <div class="dd-header-left" id="dd-header-left">
+          <!-- 由 JS 填入 -->
+        </div>
+        <button class="dd-notebook-toggle" id="dd-notebook-toggle" aria-label="顯示/隱藏筆記本" title="顯示/隱藏筆記本">📔</button>
+        <button class="dd-close" id="dd-close" aria-label="關閉">✕</button>
+      </div>
+      <div class="dd-lead" id="dd-lead"><!-- 由 JS 填入 --></div>
+    </div>
+
+    <!-- 三欄協同工作區（左：觀點看板 A+B+C／中：D 區／右：筆記本預留，各自獨立捲動） -->
+    <div class="dd-grid" id="dd-grid">
+      <div class="dd-col-left" id="dd-col-left"><!-- 由 JS 填入：A+B+C --></div>
+      <div class="dd-col-resizer" id="dd-col-resizer" title="拖曳調整寬度"></div>
+      <div class="dd-col-center" id="dd-col-center"><!-- 對話功能已移除，此欄恆為空（CSS 已收合為 0 寬度） --></div>
+      <div class="dd-col-right" id="dd-col-right"><!-- 筆記本預留，未來實作 --></div>
+    </div>
+
+    <!-- 固定底部 -->
+    <div class="dd-footer">
+      <span class="dd-footer-note">AI 生成內容，不構成投資建議。</span>
+      <span class="dd-footer-id" id="dd-footer-id"></span>
+    </div>
+  </div>
+</div>
+
+<script src="./assets/lite-app.js"></script>
+</body>
+</html>

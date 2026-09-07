@@ -737,6 +737,11 @@ async function initApp() {
   await initHomeNav();
   initDeepDiveModal();
   _cleanupLegacyApiKey();
+  // T-1903（SPEC-019 §7.2）：刻意不 await——現有渲染流程已在上面幾行
+  // 完成，此呼叫的結果本輪（walking skeleton）尚無任何 UI 消費，不需要
+  // initApp() 的完成時間點等它。函式自身保證絕不 throw（見其內部
+  // try/catch），fire-and-forget 不會產生未處理的 rejection。
+  _fetchCopilotConfig();
 }
 
 /**
@@ -751,6 +756,46 @@ function _cleanupLegacyApiKey() {
     if (typeof localStorage !== 'undefined') localStorage.removeItem('lite_gemini_api_key');
   } catch (e) {
     // 無痕模式等情境下 localStorage 不可用，本來就無殘留可清，忽略即可。
+  }
+}
+
+// T-1903（SPEC-019 §7.2）：Copilot 2.0 執行期功能旗標。與後端
+// functions/api/config.js 的 DEFAULT_CONFIG 各自獨立宣告——兩者位於
+// 不同執行環境（前端靜態資產 vs Pages Functions），無法共用常數，
+// 值必須手動保持一致。
+const _COPILOT_CONFIG_DEFAULT = {
+  generation_enabled: false,
+  tier2_enabled: true,
+  quota_limit: 3,
+};
+
+/** 模組層狀態，供本輪之後的 Task 讀取（本輪不消費此值，見 Non-scope）。 */
+let _copilotConfig = { ..._COPILOT_CONFIG_DEFAULT };
+
+/**
+ * 取得 Copilot 2.0 的執行期功能旗標（PRD DoD-13）。
+ *
+ * 以相對路徑呼叫，確保換網域時前端零改動（SDD §5）。任何失敗情境
+ * （網路錯誤、非 2xx、JSON 壞掉）一律回傳預設值物件，絕不 throw——
+ * 呼叫端（`initApp()`）刻意不 await 這個函式，若此處會 throw 或
+ * reject，就會變成未處理的 promise rejection。
+ *
+ * 靜態站（GitHub Pages，尚未接上 Cloudflare Pages Functions）上呼叫
+ * 此函式必然落入這個失敗降級路徑（404 或 HTML），這是雙 origin
+ * 過渡期的正常狀態，不是錯誤（SDD §1.10）。
+ */
+async function _fetchCopilotConfig() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) {
+      _copilotConfig = { ..._COPILOT_CONFIG_DEFAULT };
+      return _copilotConfig;
+    }
+    _copilotConfig = await res.json();
+    return _copilotConfig;
+  } catch (e) {
+    _copilotConfig = { ..._COPILOT_CONFIG_DEFAULT };
+    return _copilotConfig;
   }
 }
 

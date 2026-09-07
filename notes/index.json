@@ -1,5 +1,5 @@
 {
-  "total": 92,
+  "total": 90,
   "items": [
     {
       "ep_id": "macromicro/macromicro-2026-09-06-cciYz792Nz4",
@@ -1644,41 +1644,6 @@
         "DJI"
       ],
       "source_url": "https://www.youtube.com/watch?v=yl-S5OVnu2o"
-    },
-    {
-      "ep_id": "mk/gooaye-ep0677",
-      "title": "EP677 | 🐎",
-      "date": "2026-07-08",
-      "podcaster": "mk",
-      "tw_tickers": [],
-      "us_tickers": [
-        "TSLA",
-        "BRK.B"
-      ],
-      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/4c045cc2-378b-4653-a683-c93fc37d0a2d"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-07-08-SqtWyRmvASQ",
-      "title": "游庭皓｜2026/7/8(三)三星一季賺贏三年!晶片股卻殺盤 利多出盡?【早晨財經速解讀】",
-      "date": "2026-07-08",
-      "podcaster": "yutinghao",
-      "tw_tickers": [
-        "2330",
-        "2317"
-      ],
-      "us_tickers": [
-        "NVDA",
-        "AMD",
-        "MSFT",
-        "AMZN",
-        "MU",
-        "ORCL",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=SqtWyR-vASQ"
     }
   ]
 }

@@ -3,8 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
 <title>Podcast 財經導讀站</title>
+<!-- T-2003（SPEC-020 §7.1）：GA4 頁面瀏覽統計。Measurement ID 集中於此
+     單一位置（spec S-5），供 SPEC-021 換網域後沿用。只送 page_view
+     （gtag 預設行為），不得傳送任何可回推使用者身分的資訊或分類標籤
+     （附錄 D 第 5 條的對外承諾）。載入失敗（離線、被擋）不得影響下方
+     既有初始化流程——gtag 呼叫本身若腳本未載入只是被 no-op，不會拋出
+     例外。 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HSYX2JN6EN"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-HSYX2JN6EN');
+</script>
 <link rel="stylesheet" href="./assets/tailwind-lite.css">
 <style>
   /* ── 站台外殼樣式（非 Tailwind，逐條可審查）───────────────────────── */

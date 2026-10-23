@@ -1,0 +1,91 @@
+/* fonts.css — self-hosted web fonts (all SIL OFL 1.1, via Fontsource).
+   CSP default-src 'self' forbids third-party font hosts, so every file lives
+   next to this stylesheet.
+
+   Noto Serif TC Display is a ~29 KB subset holding ONLY the site's fixed display
+   copy (brand, hero headline, section labels). Episode content is set in the system
+   sans on purpose: the full serif spans 100+ unicode-range chunks and a single page
+   of episode titles pulled 1.2 MB of font files. If you add or change text that uses
+   var(--f-serif), regenerate with scripts/subset_lite_display_font.py — a missing
+   glyph silently falls back to the next font in the stack. */
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./instrument-serif-latin-400-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Instrument Serif';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 400;
+  src: url(./instrument-serif-latin-400-italic.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url(./inter-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url(./jetbrains-mono-latin-wght-normal.woff2) format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-0.woff2) format('woff2');
+  unicode-range: U+20-7E,U+2013-2014,U+2026,U+3001-3002,U+300C-300D,U+4E00,U+4E09,U+4E0D,U+4E3B,U+4E8B,U+4EA4,U+4EF6,U+4F55,U+5167,U+516C,U+5206,U+52D5,U+52D9,U+53CA,U+53CD,U+53F8,U+5982,U+5B8C,U+5B98,U+5BB9,U+5C0E,U+5E38,U+5FC3,U+614B,U+63D0,U+65B0,U+65B9,U+65BC,U+6613,U+6620,U+662F,U+6700,U+670D,U+672C,U+6790,U+6838,U+696D,U+6A19,U+6B0A,U+6CD5,U+6D41,U+7248,U+751F,U+7522,U+7684,U+79C1,U+7AD9,U+7CBE,U+7D93,U+805E,U+8207,U+83EF,U+88AB,U+89C0,U+8B80,U+8CA1,U+8D77,U+9019,U+91CD,U+91CF,U+9418,U+95DC,U+96B1,U+96C6,U+984C,U+9EDE;
+}
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-1.woff2) format('woff2');
+  unicode-range: U+FF0F,U+FF5C;
+}
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-2.woff2) format('woff2');
+  unicode-range: U+30FB;
+}
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-3.woff2) format('woff2');
+  unicode-range: U+FF1B;
+}
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-4.woff2) format('woff2');
+  unicode-range: U+FF01,U+FF08-FF09,U+FF1F;
+}
+@font-face {
+  font-family: 'Noto Serif TC Display';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(./noto-serif-tc-display-5.woff2) format('woff2');
+  unicode-range: U+FF0C,U+FF1A;
+}

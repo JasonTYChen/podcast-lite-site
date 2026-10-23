@@ -2,104 +2,479 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com; connect-src 'self' https://www.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.googletagmanager.com https://accounts.google.com/gsi/client; connect-src 'self' https://www.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; img-src 'self' data: https://lh3.googleusercontent.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;">
 <title>Podcast 財經導讀站</title>
-<!-- T-2003（SPEC-020 §7.1）：GA4 頁面瀏覽統計。Measurement ID 集中於此
-     單一位置（spec S-5），供 SPEC-021 換網域後沿用。只送 page_view
-     （gtag 預設行為），不得傳送任何可回推使用者身分的資訊或分類標籤
-     （附錄 D 第 5 條的對外承諾）。載入失敗（離線、被擋）不得影響下方
-     既有初始化流程——gtag 呼叫本身若腳本未載入只是被 no-op，不會拋出
-     例外。 -->
+<meta name="description" content="把台灣財經 Podcast 整理成三分鐘讀完的導讀卡：新聞事件、產業動態、標的觀點與 QA 心法，每則都標出逐字稿位置並導回原節目。非官方第三方專案，AI 生成，不構成投資建議。">
+<meta name="theme-color" content="#F3EFE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Podcast 財經導讀站">
+<meta property="og:description" content="一集財經 Podcast，三分鐘讀完重點。非官方第三方專案・AI 生成導讀。">
+<meta property="og:image" content="https://podcast-lite-site.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Podcast 財經導讀站","url":"https://podcast-lite-site.pages.dev/","inLanguage":"zh-Hant","description":"把台灣財經 Podcast 整理成三分鐘讀完的導讀卡。非官方第三方專案，AI 生成，不構成投資建議。"}</script>
+<!-- T-2003（SPEC-020 §7.1）：GA4 頁面瀏覽統計。初始化碼移至同源的
+     ga-init.js——寫成 inline script 會被本頁 CSP（script-src 無
+     'unsafe-inline'）擋掉，gtag.js 載入了卻從未 config（見該檔說明）。
+     載入失敗（離線、被擋）不得影響下方既有初始化流程：lite-app.js 對
+     gtag／dataLayer 零參照。 -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HSYX2JN6EN"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-HSYX2JN6EN');
-</script>
+<script defer src="./assets/ga-init.js"></script>
+<!-- T-2211（SPEC-022 §7.6）：Google 登入（GIS）SDK。載入本身不等於
+     啟用登入——是否呼叫 google.accounts.id.initialize() 由
+     lite-app.js 的 _shouldEnableGoogleLogin() 閘門決定，只在
+     /api/config 回傳非空 google_client_id 時才會發生。載入失敗同樣
+     不得影響既有初始化流程：閘門函式與呼叫端皆須容忍 window.google
+     不存在。 -->
+<script async defer src="https://accounts.google.com/gsi/client"></script>
+<link rel="preload" href="./assets/fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="./assets/fonts/fonts.css">
 <link rel="stylesheet" href="./assets/tailwind-lite.css">
 <style>
-  /* ── 站台外殼樣式（非 Tailwind，逐條可審查）───────────────────────── */
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #f8fafc;
-    color: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
-      "Microsoft JhengHei", sans-serif;
-  }
-  a { color: inherit; }
+  /* ═══════════════════════════════════════════════════════════════════
+     設計系統（2026-10 改版，使用者授權 Lite 與自用側暫時分岔呈現層）
+     ───────────────────────────────────────────────────────────────────
+     概念：財經早報。暖白新聞紙底、墨色正文、朱紅色作為唯一強調色。
+     色彩語意依台股慣例「紅漲綠跌」——偏多用紅、偏空用綠；四個節目
+     各有一個識別色，只用在小面積的標記上，不使用任何原節目的 Logo。
+     所有顏色皆為 token，深色模式只重新定義 token，元件規則不重寫。
+     ═══════════════════════════════════════════════════════════════════ */
+  :root {
+    --paper: #F3EFE7;
+    --paper-2: #EAE4D8;
+    --card: #FBF9F5;
+    --ink: #17140F;
+    --ink-2: #48433A;
+    --ink-3: #6C6558;
+    --rule: #DCD4C5;
+    --rule-2: #C4B9A4;
+    --band: #17140F;
+    --band-ink: #F6F2EA;
+    --accent: #BF3318;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #F8DDD4;
+    --up: #B42F17;
+    --up-bg: #F9E1DA;
+    --down: #17734A;
+    --down-bg: #DCEFE4;
+    --flat: #57514A;
+    --flat-bg: #E6E0D4;
+    --hl: #E9A82B;
+    --hl-bg: #FBEDC9;
+    --pod-yutinghao: #2F55B5;
+    --pod-macromicro: #0A7166;
+    --pod-mk: #8E3FA5;
+    --pod-statementdog: #A8520F;
+    --shadow: 0 1px 0 rgba(23,20,15,.04), 0 18px 40px -26px rgba(23,20,15,.45);
+    --f-serif: "Noto Serif TC Display", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+    --f-display: "Instrument Serif", "Noto Serif TC Display", Georgia, serif;
+    --f-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --f-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    /* 內容標題（集數標題、新聞標題等）一律用系統無襯線粗體：襯線字型只收錄
+       固定展示文案的字（見 fonts.css），內容文字用它會逐字退回系統字型。 */
+    --f-head: var(--f-sans);
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --mast-h: 64px;
+    --gutter: clamp(16px, 4vw, 48px);
+    color-scheme: light;
 
+    /* 深入解讀 Modal 沿用的舊 token 名稱，改指向新 token（JS 內嵌樣式仍引用）。 */
+    --dd-bg: var(--paper);
+    --dd-surface: var(--card);
+    --dd-border: var(--rule);
+    --dd-accent: var(--accent);
+    --dd-violet: var(--pod-mk);
+    --dd-emerald: var(--down);
+    --dd-amber: var(--hl);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121110;
+      --paper-2: #0C0B0A;
+      --card: #1B1A17;
+      --ink: #F1ECE2;
+      --ink-2: #C9C1B2;
+      --ink-3: #9F9788;
+      --rule: #2F2C27;
+      --rule-2: #4A453D;
+      --band: #26231F;
+      --band-ink: #F6F2EA;
+      --accent: #FF6A4A;
+      --accent-ink: #17140F;
+      --accent-soft: #3A1D16;
+      --up: #FF7A5C;
+      --up-bg: #3A1D16;
+      --down: #4FCB8C;
+      --down-bg: #13301F;
+      --flat: #B5AD9F;
+      --flat-bg: #2B2925;
+      --hl: #F2BC4C;
+      --hl-bg: #33280F;
+      --pod-yutinghao: #86A4FF;
+      --pod-macromicro: #45CBB8;
+      --pod-mk: #D493EA;
+      --pod-statementdog: #F2A65E;
+      --shadow: 0 1px 0 rgba(0,0,0,.3), 0 18px 40px -24px rgba(0,0,0,.8);
+      color-scheme: dark;
+    }
+    /* Copilot 工作台與合規彈窗的內容大量由 JS 以內嵌樣式產生（白底輸入框、
+       深色字），深色模式下把這兩個疊層的 token 鎖回淺色，避免白底白字。 */
+    #copilot-panel, #compliance-overlay {
+      --paper: #F3EFE7; --paper-2: #EAE4D8; --card: #FBF9F5;
+      --ink: #17140F; --ink-2: #48433A; --ink-3: #6C6558;
+      --rule: #DCD4C5; --rule-2: #C4B9A4;
+      --accent: #BF3318; --accent-ink: #FFFFFF; --accent-soft: #F8DDD4;
+      --up: #B42F17; --up-bg: #F9E1DA;
+      color-scheme: light;
+    }
+  }
+  [data-pod="yutinghao"] { --pod: var(--pod-yutinghao); }
+  [data-pod="macromicro"] { --pod: var(--pod-macromicro); }
+  [data-pod="mk"] { --pod: var(--pod-mk); }
+  [data-pod="statementdog"] { --pod: var(--pod-statementdog); }
+
+  /* ── Base ─────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--mast-h) + 72px); }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-sans);
+    font-size: 15px;
+    line-height: 1.7;
+    font-feature-settings: "palt" 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body.is-locked { overflow: hidden; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  img, svg { display: block; }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  [hidden] { display: none !important; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .skip-link {
+    position: absolute; left: 16px; top: -48px; z-index: 30000;
+    background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 10px;
+    text-decoration: none; font-weight: 600; transition: top .2s var(--ease-out);
+  }
+  .skip-link:focus { top: 12px; }
+
+  /* ── 站台標頭（masthead）─────────────────────────────────────────── */
   .site-header {
     position: sticky;
     top: 0;
-    z-index: 20;
-    background: #0f172a;
-    color: #ffffff;
-    padding: 12px 20px;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    z-index: 40;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s ease;
   }
-  .site-header .brand {
-    font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 0.02em;
+  .site-header.is-scrolled { border-bottom-color: var(--rule); }
+  .mast {
+    max-width: 1200px; margin: 0 auto;
+    height: var(--mast-h);
+    padding: 0 var(--gutter);
+    display: flex; align-items: center; gap: 16px;
   }
-  .site-header .brand-sub {
-    font-size: 0.7rem;
-    color: #94a3b8;
+  .wordmark {
+    display: inline-flex; align-items: center; gap: 10px;
+    text-decoration: none; color: var(--ink); flex-shrink: 0;
+  }
+  .wordmark-mark { width: 30px; height: 30px; }
+  .brand {
+    font-family: var(--f-serif); font-weight: 700; font-size: 1.05rem;
+    letter-spacing: .02em; white-space: nowrap;
+  }
+  .brand em {
+    font-family: var(--f-display); font-style: italic; font-weight: 400;
+    font-size: 1.22em; letter-spacing: 0; margin-right: .28em;
+  }
+  .mast-nav { display: none; gap: 4px; margin-left: 24px; }
+  .mast-nav a {
+    text-decoration: none; font-size: 14px; color: var(--ink-2);
+    padding: 6px 12px; border-radius: 999px; transition: background .2s, color .2s;
+  }
+  .mast-nav a:hover { background: var(--paper-2); color: var(--ink); }
+  .mast-spacer { flex: 1; }
+  .mast-about {
+    font-size: 14px; color: var(--ink-2); text-decoration: none;
+    padding: 6px 4px; border-bottom: 1px solid var(--rule-2);
+  }
+  .mast-about:hover { color: var(--ink); border-color: var(--ink); }
+  #google-user-info img { border: 1px solid var(--rule); }
+  .ghost-btn {
+    border: 1px solid var(--rule-2); background: transparent; color: var(--ink-2);
+    border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer;
+  }
+  .ghost-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ── 新聞跑馬燈（tape）──────────────────────────────────────────────
+     純粹的「最新事件」索引，每則可點進該集。hover／focus 時暫停，
+     prefers-reduced-motion 時整條改為可橫向捲動的靜態列。 */
+  .tape {
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    overflow: hidden; position: relative; height: 37px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .tape-track {
+    display: flex; width: max-content;
+    animation: tape-scroll var(--tape-dur, 120s) linear infinite;
+  }
+  .tape:hover .tape-track, .tape:focus-within .tape-track { animation-play-state: paused; }
+  .tape-set { display: flex; flex-shrink: 0; }
+  .tape a {
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+    padding: 8px 22px; font-size: 13px; color: var(--ink-2); text-decoration: none;
+    border-right: 1px solid var(--rule);
+  }
+  .tape a:hover { color: var(--ink); }
+  .tape-pod {
+    font: 600 10px/1 var(--f-mono); letter-spacing: .08em; color: var(--pod, var(--ink-3));
+  }
+  @keyframes tape-scroll { to { transform: translateX(-50%); } }
+
+  /* ── Hero ─────────────────────────────────────────────────────────── */
+  .hero {
+    max-width: 1200px; margin: 0 auto;
+    padding: clamp(40px, 8vw, 104px) var(--gutter) clamp(32px, 5vw, 56px);
+  }
+  .hero-grid { display: grid; gap: 36px; align-items: end; margin-top: clamp(28px, 4vw, 48px); }
+  .eyebrow {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+    margin: 0 0 28px;
+    font: 500 12px/1.4 var(--f-mono); letter-spacing: .06em; color: var(--ink-3);
+  }
+  /* 日期範圍由 JS 於索引載入後填入；窄螢幕固定獨佔第二行，填入前後高度一致。 */
+  @media (max-width: 639px) { #hero-range { flex-basis: 100%; min-height: 1.4em; } }
+  .eyebrow-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  .hero-title {
+    font-family: var(--f-serif); font-weight: 700;
+    font-size: clamp(2rem, 8.6vw, 7.4rem);
+    line-height: 1.1; letter-spacing: -.015em;
+    margin: 0;
+  }
+  .hero-title .line { display: block; overflow: hidden; padding-bottom: .06em; }
+  .hero-title .line > span { display: inline-block; white-space: nowrap; }
+  .hero-title em {
+    font-style: normal; color: var(--accent);
+    background: linear-gradient(transparent 72%, var(--accent-soft) 72%, var(--accent-soft) 92%, transparent 92%);
+  }
+  .hero-lede {
+    max-width: 30em; margin: 0;
+    font-size: clamp(15px, 1.35vw, 17px); line-height: 1.9; color: var(--ink-2);
+  }
+  .hero-stats {
+    margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px;
+    border-top: 2px solid var(--ink);
+  }
+  /* dt 在前（語意正確），以 column-reverse 讓數字顯示在標籤上方。 */
+  .hero-stat {
+    display: flex; flex-direction: column-reverse; gap: 6px;
+    padding: 14px 0 12px; border-bottom: 1px solid var(--rule);
+  }
+  .hero-stat dt { font-size: 13px; color: var(--ink-3); }
+  .hero-stat dd {
+    margin: 0; font-family: var(--f-display); font-size: clamp(2.4rem, 4.4vw, 3.4rem);
+    line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.01em;
   }
 
-  /* ── podcaster 篩選 chip（T-1205，spec-012 §7.1/§7.2）────────────────
-     顯示 slug 大寫（使用者裁決，不新增中文對照表、不動卡片）。
-     容器固定位於 .site-header 內——不得放進 #site-main，因
-     _renderCardList／_renderEmptyState 會覆寫 #site-main 整個
-     innerHTML（SPEC-011 已驗證此契約，spec-012 §7.5）。 */
+  /* 脈動圖：每一條是一集，高度＝該集整理出的重點則數，顏色＝節目。 */
+  .pulse { margin: clamp(40px, 6vw, 72px) 0 0; }
+  .pulse-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+    gap: 8px 24px; margin-bottom: 16px;
+  }
+  .pulse-head figcaption { font-size: 13px; color: var(--ink-3); max-width: 40em; }
+  .pulse-head figcaption strong { color: var(--ink); font-weight: 600; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; min-height: 28px; }
+  .legend li {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 11px/1 var(--f-mono); letter-spacing: .06em; color: var(--ink-2);
+  }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--pod, var(--ink-3)); }
+  .pulse-track {
+    position: relative;
+    display: flex; align-items: flex-end; gap: 2px;
+    height: clamp(96px, 14vw, 168px);
+    padding-bottom: 1px;
+    border-bottom: 1px solid var(--ink);
+  }
+  .pulse-bar {
+    flex: 1 1 0; min-width: 2px;
+    height: max(6%, calc(var(--h, .3) * 100%));
+    background: var(--pod, var(--ink-3));
+    border-radius: 3px 3px 0 0;
+    opacity: .9;
+    transform-origin: bottom;
+    transition: opacity .2s, transform .35s var(--ease-out);
+  }
+  .pulse-track:hover .pulse-bar { opacity: .35; }
+  .pulse-track .pulse-bar:hover, .pulse-bar:focus-visible { opacity: 1; transform: scaleY(1.06); }
+  .pulse-bar:focus-visible { outline-offset: 2px; border-radius: 3px; }
+  .pulse-bar.is-dim { opacity: .14; }
+  .pulse-axis {
+    position: relative; height: 22px; margin-top: 6px;
+    font: 500 11px/1 var(--f-mono); color: var(--ink-3); letter-spacing: .04em;
+  }
+  .pulse-axis span { position: absolute; top: 4px; white-space: nowrap; }
+  .pulse-axis span::before {
+    content: ""; position: absolute; left: 0; top: -10px; width: 1px; height: 6px; background: var(--ink-3);
+  }
+  .pulse-tip {
+    position: fixed; z-index: 50; pointer-events: none;
+    max-width: 280px; padding: 10px 12px; border-radius: 12px;
+    background: var(--band); color: var(--band-ink); box-shadow: var(--shadow);
+    font-size: 13px; line-height: 1.5;
+    opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s;
+  }
+  .pulse-tip.is-on { opacity: 1; transform: none; }
+  .pulse-tip b { display: block; font: 600 11px/1.4 var(--f-mono); letter-spacing: .06em; opacity: .7; margin-bottom: 4px; }
+
+  /* ── 熱門標的 ─────────────────────────────────────────────────────── */
+  .trending { border-top: 1px solid var(--rule); }
+  .section-inner { max-width: 1200px; margin: 0 auto; padding: clamp(40px, 6vw, 72px) var(--gutter); }
+  .section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; margin-bottom: 28px; }
+  .kicker-title {
+    margin: 0; font-family: var(--f-serif); font-weight: 700;
+    font-size: clamp(1.5rem, 3vw, 2.2rem); line-height: 1.25;
+  }
+  .section-note { margin: 0; font-size: 13px; color: var(--ink-3); }
+  .trend-cols { display: grid; gap: 32px; }
+  .trend-col h3 {
+    margin: 0 0 6px; font: 600 12px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); padding-bottom: 10px; border-bottom: 2px solid var(--ink);
+  }
+  .trend-list { list-style: none; margin: 0; padding: 0; min-height: 306px; }
+  .trend-list li { border-bottom: 1px solid var(--rule); }
+  .trend-btn {
+    width: 100%; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+    padding: 12px 4px; border: 0; background: transparent; cursor: pointer; text-align: left;
+    position: relative; border-radius: 8px;
+  }
+  .trend-rank { font-family: var(--f-display); font-size: 1.35rem; color: var(--ink-3); line-height: 1; }
+  .trend-name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trend-name small { font: 500 11px var(--f-mono); color: var(--ink-3); margin-left: 6px; letter-spacing: .04em; }
+  .trend-meter { display: flex; align-items: center; gap: 10px; font: 500 12px var(--f-mono); color: var(--ink-2); }
+  .trend-meter i {
+    display: block; height: 6px; width: calc(var(--w, .5) * 88px); min-width: 6px; border-radius: 3px;
+    background: var(--ink); transition: background .2s;
+  }
+  .trend-btn:hover .trend-meter i, .trend-btn[aria-pressed="true"] .trend-meter i { background: var(--accent); }
+  .trend-btn:hover .trend-name, .trend-btn[aria-pressed="true"] .trend-name { color: var(--accent); }
+
+  /* ── 篩選列（sticky）────────────────────────────────────────────────
+     podcaster chip 容器必須留在 #site-main 之外：_renderCardList／
+     _renderEmptyState 會覆寫 #site-main 整個 innerHTML（SPEC-011 契約）。 */
+  .filter-bar {
+    position: sticky; top: var(--mast-h); z-index: 30;
+    background: color-mix(in srgb, var(--paper) 90%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  }
+  .filter-inner {
+    max-width: 1200px; margin: 0 auto; padding: 10px var(--gutter);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+  }
+  .filter-group { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .filter-group--pods { flex: 1 1 100%; }
+  .filter-label { font: 600 11px/1 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); flex-shrink: 0; }
   #podcaster-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+    margin: -4px; padding: 4px; min-width: 0; min-height: 34px;
   }
+  #podcaster-chips::-webkit-scrollbar { display: none; }
   .podcaster-chip {
-    border: 1px solid #334155;
+    display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0;
+    border: 1px solid var(--rule-2);
     background: transparent;
-    color: #cbd5e1;
+    color: var(--ink-2);
     border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+    padding: 6px 12px 6px 10px;
+    font: 600 11px/1 var(--f-mono);
+    letter-spacing: .06em;
     cursor: pointer;
-    transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
   }
-  .podcaster-chip:hover {
-    border-color: #64748b;
-    color: #e2e8f0;
-  }
+  .podcaster-chip:hover { border-color: var(--ink); color: var(--ink); }
+  .podcaster-chip .chip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pod, var(--ink-3)); }
+  .podcaster-chip .chip-count { font-weight: 500; color: var(--ink-3); }
+  .podcaster-chip:hover .chip-count { color: var(--ink-2); }
   .podcaster-chip[aria-pressed="true"] {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #ffffff;
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
   }
+  .podcaster-chip[aria-pressed="true"] .chip-dot { box-shadow: 0 0 0 2px var(--paper); }
+  .podcaster-chip[aria-pressed="true"] .chip-count { color: inherit; opacity: .8; }
+  .week-select {
+    appearance: none; -webkit-appearance: none;
+    font: 500 13px/1 var(--f-mono); letter-spacing: .02em; color: var(--ink);
+    background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236C6558' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+    border: 1px solid var(--rule-2); border-radius: 999px;
+    padding: 8px 32px 8px 14px; cursor: pointer; max-width: 230px;
+  }
+  .week-select:hover { border-color: var(--ink); }
+  .ticker-filter {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: var(--accent-ink);
+    border-radius: 999px; padding: 4px 4px 4px 12px; font-size: 13px; font-weight: 600;
+  }
+  .ticker-filter button {
+    width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer;
+    background: color-mix(in srgb, var(--accent-ink) 22%, transparent); color: inherit;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1;
+  }
+  .result-count { margin: 0 0 0 auto; font: 500 12px/28px var(--f-mono); color: var(--ink-3); white-space: nowrap; min-height: 28px; }
+  .result-count b { color: var(--ink); font-weight: 600; }
 
+  /* ── 主內容：週別分組的導讀列表 ─────────────────────────────────── */
   .site-main {
     max-width: 720px;
     margin: 0 auto;
-    padding: 20px 16px 64px;
-    min-height: calc(100vh - 200px);
+    padding: 8px var(--gutter) 96px;
+    min-height: 60vh;
+    outline: none;
   }
+  .week { padding-top: clamp(40px, 6vw, 72px); }
+  /* 視窗外的週別區塊不排版、不繪製：86 張磚的標題字元橫跨上百個字型分塊，
+     全部繪製會一次下載 1MB 以上的字型。延後到捲近時才繪製，字型也跟著
+     延後下載；auto 讓瀏覽器記住實際高度，回捲時不跳動。 */
+  .week + .week { content-visibility: auto; contain-intrinsic-size: auto 1400px; }
+  .week-head {
+    display: flex; align-items: flex-end; gap: 16px;
+    padding-bottom: 14px; margin-bottom: 24px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .week-num {
+    font-family: var(--f-display); font-weight: 400;
+    font-size: clamp(3rem, 7vw, 5.2rem); line-height: .82; letter-spacing: -.02em;
+    margin: 0;
+  }
+  .week-num span { font-style: italic; color: var(--accent); }
+  .week-meta { display: flex; flex-direction: column; gap: 2px; padding-bottom: 4px; }
+  .week-range { font-family: var(--f-serif); font-weight: 700; font-size: 1.05rem; }
+  .week-count { font: 500 12px var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
 
   /* ── 卡片容器（T-1101，spec-011 S-1/S-2）─────────────────────────────
-     預設（<900px）單欄；≥900px 由下方 media query 切為雙欄。
-     Grid 逐列填（非「auto-flow 設為 column」、非 CSS 多欄排版屬性），DOM 順序
-     即閱讀順序，左→右→下一列嚴格對應 index.json 的日期倒序（spec §7.2）。
-     align-items:start 讓卡片各自維持原生高度，不被拉伸等高（spec §7.3，
-     避免卡片內部 padding／區塊間距被撐開而牴觸 DoD-2）。 */
+     預設（<900px）單欄；≥900px 由下方 media query 切為雙欄。Grid 逐列填，
+     DOM 順序即閱讀順序，左→右→下一列嚴格對應日期倒序（spec §7.2）。
+     align-items:start 保留為容器預設；導讀磚（.tile）本身以 align-self
+     撐滿列高，讓同列的磚底部切齊——磚的底部列是 margin-top:auto 的
+     統計列，撐高不會拉開內部間距（spec §7.3 的顧慮只針對完整卡片）。 */
   .card-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -107,114 +482,432 @@
     align-items: start;
   }
 
-  .site-footer {
-    background: #0f172a;
-    color: #94a3b8;
-    padding: 24px 20px 32px;
-    font-size: 0.75rem;
-    line-height: 1.6;
+  /* ── 導讀磚（tile）──────────────────────────────────────────────── */
+  .tile {
+    align-self: stretch;
+    position: relative;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 22px 22px 18px;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    transition: transform .45s var(--ease-out), box-shadow .45s var(--ease-out), border-color .2s;
   }
-  .site-footer .footer-inner {
-    max-width: 720px;
-    margin: 0 auto;
+  .tile::before {
+    content: ""; position: absolute; left: 22px; top: -1px; width: 36px; height: 3px;
+    border-radius: 0 0 3px 3px; background: var(--pod, var(--ink-3));
+    transition: width .45s var(--ease-out);
   }
-  .site-footer a {
-    color: #93c5fd;
-    text-decoration: underline;
+  .tile:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--rule-2); }
+  .tile:hover::before { width: 72px; }
+  .tile:focus-within { border-color: var(--ink); }
+  .tile-meta {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    font: 500 11px/1 var(--f-mono); letter-spacing: .08em; color: var(--ink-3);
   }
-  .site-footer .footer-disclaimer {
-    margin-bottom: 12px;
-    color: #cbd5e1;
+  .pod-mark { display: inline-flex; align-items: center; gap: 7px; color: var(--pod, var(--ink-3)); font-weight: 600; }
+  .pod-mark i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .tile-title {
+    margin: 0;
+    font-family: var(--f-head); font-weight: 700;
+    font-size: 1.06rem; line-height: 1.6; letter-spacing: .01em;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .site-footer .footer-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
+  .tile-link { text-decoration: none; color: inherit; }
+  .tile-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: 1; }
+  .tile-link:focus-visible { outline: none; }
+  .tile-link:focus-visible::after { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .tile:hover .tile-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; text-decoration-color: var(--rule-2); }
+  .tile-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .tile-points li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; line-height: 1.6; color: var(--ink-2); }
+  .pt-kind {
+    font: 600 10px/1.6 var(--f-mono); letter-spacing: .06em; color: var(--ink-3);
+    border: 1px solid var(--rule-2); border-radius: 4px; padding: 0 5px;
   }
+  .pt-kind--industry { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .tile-quote {
+    margin: 0; padding: 14px 16px; border-radius: 14px; background: var(--hl-bg);
+    font-size: 14px; line-height: 1.7; color: var(--ink); font-weight: 500;
+  }
+  .tile-tickers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tk {
+    display: inline-flex; align-items: baseline; gap: 5px;
+    font-size: 12px; line-height: 1; padding: 5px 9px; border-radius: 999px;
+    background: var(--paper-2); color: var(--ink-2);
+  }
+  .tk small { font: 500 10px var(--f-mono); color: var(--ink-3); }
+  .tile-foot {
+    margin-top: auto; padding-top: 14px; border-top: 1px dashed var(--rule-2);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    font: 500 11px/1.4 var(--f-mono); color: var(--ink-3); letter-spacing: .02em;
+  }
+  .tile-cta { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+  .tile-cta svg { width: 14px; height: 14px; transition: transform .35s var(--ease-out); }
+  .tile:hover .tile-cta svg { transform: translateX(4px); }
+  .tile-skel { min-height: 260px; pointer-events: none; }
+  .tile-skel::before { display: none; }
+  .tile-skel .sk {
+    height: 12px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--paper-2) 30%, var(--rule) 50%, var(--paper-2) 70%) 0 0 / 300% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  .tile-skel .sk-lg { height: 20px; }
+  @keyframes shimmer { to { background-position: -150% 0; } }
+  .tile-placeholder {
+    align-self: stretch; padding: 22px; border-radius: 20px; border: 1px dashed var(--rule-2);
+    color: var(--ink-3); font-size: 13px; text-align: center;
+  }
+
+  /* 磚內分兩組（main：節目／標題／標的；side：重點／收斂）。一般磚以
+     display:contents 攤平並用 order 排回「標題→重點→標的」；頭版在寬螢幕
+     才把兩組並排。 */
+  .tile-main, .tile-side { display: contents; }
+  .tile-meta { order: 1; } .tile-title { order: 2; } .tile-points { order: 3; }
+  .tile-quote { order: 4; } .tile-tickers { order: 5; } .tile-foot { order: 6; }
+
+  /* 首張（最新一集）為頭版：雙欄寬、較大標題、附收斂句。 */
+  .tile--lead .tile-title { font-size: clamp(1.3rem, 2.1vw, 1.7rem); line-height: 1.5; -webkit-line-clamp: 4; }
+  .tile--lead { padding: 28px 28px 22px; }
+  .tile--lead::before { left: 28px; }
 
   .empty-state {
     text-align: center;
-    padding: 64px 16px;
-    color: #94a3b8;
-    font-size: 0.875rem;
+    padding: 96px 16px;
+    color: var(--ink-3);
+    font-size: 15px;
+  }
+  .empty-state .empty-title { font-family: var(--f-head); font-weight: 700; font-size: 1.4rem; color: var(--ink); margin-bottom: 8px; }
+  .empty-state button { margin-top: 18px; }
+
+  /* 捲動進場（只在 JS 確認 IntersectionObserver 可用時才加上 .reveal-on，
+     沒有 JS 或不支援時內容一律直接可見）。 */
+  .reveal-on .reveal { opacity: 0; transform: translateY(18px); }
+  .reveal-on .reveal.is-in {
+    opacity: 1; transform: none;
+    transition: opacity .8s var(--ease-out), transform .8s var(--ease-out);
+    transition-delay: calc(var(--d, 0) * 60ms);
   }
 
-  /* ── 卡片標頭列的窄螢幕換行（手機排版修正）───────────────────────────
-     問題：標頭列是 flex，左為標題、右為「標籤＋來源＋深入解讀」群組，
-     而右群組帶 flex-shrink:0。窄螢幕下右群組可達 278px，吃掉整列寬度，
-     留給標題的空間只剩 ~37px；flex item 的 min-width 預設為 auto，對
-     中文會退到單字寬，於是標題被壓成一字一行的直排，右群組還會溢出
-     容器（實測 390px 視窗溢出 20px，「深入解讀」按鈕被切掉）。
-
-     解法不用硬寫斷點——右群組寬度會隨標籤字數變動，斷點必然猜不準。
-     改為給標題一個彈性基準寬（12rem）：容器塞得下「標題 12rem ＋ 右群組」
-     時維持原本的左右並排；塞不下就整列換行，標題獨佔一行、右群組移到
-     下一行。min-width:0 解除 auto 最小寬，才不會反過來撐破容器。 */
-  .card-head { flex-wrap: wrap; }
-  .card-head > :first-child {
-    flex: 1 1 12rem;
-    min-width: 0;
-    overflow-wrap: anywhere;
+  /* ── 通用按鈕 ─────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600;
+    text-decoration: none; cursor: pointer; border: 1px solid transparent;
+    transition: transform .2s var(--ease-out), background .2s, border-color .2s, color .2s;
   }
-  /* 右群組本身也要能換行，否則極窄裝置下仍會溢出：它帶 flex-shrink:0，
-     寬度會固定在 max-content（＝所有子元素寬度總和），單靠 flex-wrap
-     永遠不會觸發內部換行。需同時解除 shrink 限制並封頂寬度，子元素
-     （標籤／來源／深入解讀按鈕）才會依實際可用寬度落到下一行。 */
-  .card-head-meta {
-    flex-wrap: wrap;
-    flex-shrink: 1;
-    min-width: 0;
-    max-width: 100%;
-  }
+  .btn svg { width: 16px; height: 16px; }
+  .btn:active { transform: scale(.97); }
+  .btn--accent { background: var(--accent); color: var(--accent-ink); }
+  .btn--accent:hover { filter: brightness(1.06); }
+  .btn--line { border-color: var(--rule-2); color: var(--ink); background: transparent; }
+  .btn--line:hover { border-color: var(--ink); }
 
-  /* ── 卡片渲染鏈自訂樣式（T-804，逐字移植自 public/index.html:121-122, 471-479）── */
-  .signal-card { transition: box-shadow 0.15s, transform 0.15s; }
-  .signal-card:hover { box-shadow: 0 4px 20px rgba(30,58,138,0.10); transform: translateY(-1px); }
-
+  /* 「深入解讀」與「💬 帶入討論」（類名沿用，JS 多處以此類名產生按鈕）。 */
   .dd-more-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 4px 10px; border-radius: 5px;
-    border: 1px solid #CBD5E1; background: #F8FAFC;
-    font-size: 11px; font-weight: 600; color: #475569;
-    cursor: pointer; transition: background .12s;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: transparent;
+    font-size: 12.5px; font-weight: 600; color: var(--ink);
+    cursor: pointer; transition: background .15s, border-color .15s, color .15s;
     white-space: nowrap;
   }
-  .dd-more-btn:hover { background: #E2E8F0; }
-
-  /* ── 深入解讀 Modal 樣式（T-806，逐字移植自 public/index.html:120-438）── */
-  :root {
-    --dd-bg: #F8FAFC;
-    --dd-surface: #FFFFFF;
-    --dd-border: #E2E8F0;
-    --dd-accent: #6366F1;
-    --dd-violet: #8B5CF6;
-    --dd-emerald: #10B981;
-    --dd-amber: #F59E0B;
+  .dd-more-btn:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .dd-more-btn:disabled { opacity: .45; cursor: not-allowed; background: transparent; color: var(--ink-3); }
+  .dd-more-btn[data-action="open-deep-dive"]::after {
+    content: ""; width: 12px; height: 12px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8h10M9 4l4 4-4 4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
   }
 
+  /* ── 閱讀器（單集導讀全文）─────────────────────────────────────────
+     z-index 低於深入解讀（9999）與 Copilot 面板（10001）：從閱讀器內
+     點「深入解讀」或「帶入討論」，兩者都必須疊在閱讀器之上。 */
+  .reader {
+    position: fixed; inset: 0; z-index: 9000;
+    background: var(--paper);
+    display: flex; flex-direction: column;
+  }
+  .reader:focus { outline: none; }
+  /* 共享元素轉場（見 lite-app.js 的 _openReaderWithMorph）。同一時間只有一個
+     元素帶這個名稱：閱讀器關著時其 .ep-title 不繪製，開著時磚上的名稱已清除。 */
+  .reader .ep-title { view-transition-name: ep-title; }
+  ::view-transition-group(ep-title) { animation-duration: .6s; animation-timing-function: var(--ease-out); }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .4s; }
+  .reader.is-entering { animation: reader-in .55s var(--ease-out) both; }
+  @keyframes reader-in { from { opacity: 0; transform: translateY(28px); } }
+  .reader-progress {
+    position: absolute; left: 0; top: 0; height: 2px; width: 100%; z-index: 2;
+    background: var(--accent); transform-origin: left; transform: scaleX(var(--p, 0));
+  }
+  .reader-bar {
+    flex-shrink: 0; height: 60px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 var(--gutter);
+    border-bottom: 1px solid var(--rule);
+  }
+  .reader-back {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 0; background: transparent; cursor: pointer; padding: 8px 10px 8px 0;
+    font-size: 14px; font-weight: 600;
+  }
+  .reader-back svg { width: 18px; height: 18px; transition: transform .3s var(--ease-out); }
+  .reader-back:hover svg { transform: translateX(-3px); }
+  kbd {
+    font: 500 10px/1 var(--f-mono); padding: 3px 5px; border-radius: 4px;
+    border: 1px solid var(--rule-2); color: var(--ink-3); background: var(--card);
+  }
+  .reader-pos { margin-left: auto; font: 500 12px var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
+  .reader-steps { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid var(--rule-2); background: var(--card); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: border-color .2s, background .2s, color .2s;
+  }
+  .icon-btn svg { width: 16px; height: 16px; }
+  .icon-btn:hover:not(:disabled) { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .icon-btn:disabled { opacity: .35; cursor: default; }
+  .reader-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; }
+  .reader-body { max-width: 1160px; margin: 0 auto; padding: clamp(28px, 5vw, 64px) var(--gutter) 120px; }
+  .reader-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 48px; }
+  .reader-toc { display: none; }
+  .reader-toc ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); }
+  .reader-toc button {
+    display: flex; width: 100%; justify-content: space-between; align-items: baseline; gap: 8px;
+    border: 0; background: transparent; cursor: pointer; text-align: left;
+    padding: 8px 0 8px 16px; margin-left: -1px; border-left: 2px solid transparent;
+    font-size: 14px; color: var(--ink-3); transition: color .2s, border-color .2s;
+  }
+  .reader-toc button span:last-child { font: 500 11px var(--f-mono); }
+  .reader-toc button:hover { color: var(--ink); }
+  .reader-toc button.is-active { color: var(--ink); border-left-color: var(--accent); font-weight: 600; }
+  .reader-toc-title { font: 600 11px/1 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); margin: 0 0 14px; }
+  .reader-next {
+    max-width: 780px; margin-top: 56px; display: grid; gap: 6px; padding: 28px; border-radius: 20px;
+    background: var(--band); color: var(--band-ink); text-decoration: none;
+    transition: transform .4s var(--ease-out);
+  }
+  .reader-next:hover { transform: translateY(-3px); }
+  .reader-next small { font: 500 11px var(--f-mono); letter-spacing: .1em; opacity: .7; }
+  .reader-next strong { font-family: var(--f-head); font-weight: 700; font-size: clamp(1.05rem, 1.9vw, 1.3rem); line-height: 1.55; }
+
+  /* ── 單集導讀（renderEpisodeCard 產出）─────────────────────────────── */
+  .ep { max-width: 780px; }
+  .ep-head { padding-bottom: 32px; border-bottom: 2px solid var(--ink); }
+  .ep-kicker {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+    font: 500 12px/1 var(--f-mono); letter-spacing: .08em; color: var(--ink-3);
+  }
+  .ep-title {
+    margin: 18px 0 24px;
+    font-family: var(--f-head); font-weight: 800;
+    font-size: clamp(1.5rem, 3.4vw, 2.4rem); line-height: 1.42; letter-spacing: .005em;
+    text-wrap: pretty;
+  }
+  .ep-digest { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 28px; padding: 0; list-style: none; }
+  .ep-digest li { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--ink-3); }
+  .ep-digest b { font-family: var(--f-display); font-weight: 400; font-size: 2.1rem; line-height: 1; color: var(--ink); }
+  .ep-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+  .ep-cta-note { font-size: 13px; color: var(--ink-3); }
+  .ep-sec { padding: 44px 0; border-bottom: 1px solid var(--rule); }
+  .ep-sec:last-of-type { border-bottom: 0; }
+  .ep-sec-title {
+    display: flex; align-items: baseline; gap: 14px; margin: 0 0 26px;
+    font-family: var(--f-serif); font-weight: 700; font-size: clamp(1.3rem, 2.4vw, 1.65rem);
+  }
+  .ep-sec-no { font-family: var(--f-display); font-style: italic; font-weight: 400; color: var(--accent); font-size: .9em; }
+  .ep-sec-count { margin-left: auto; font: 500 12px var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
+  .ep-sec-hint { margin: -14px 0 18px; font-size: 13px; color: var(--ink-3); }
+  .stock-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stock-chip {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 600;
+    border: 1px solid var(--rule-2); background: var(--card); color: var(--ink);
+    cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+  }
+  .stock-chip small { font: 500 11px var(--f-mono); color: var(--ink-3); }
+  .stock-chip:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .stock-chip:hover small { color: inherit; opacity: .7; }
+  span.stock-chip, .stock-chip:disabled { cursor: default; }
+  span.stock-chip:hover, .stock-chip:disabled:hover { background: var(--card); color: var(--ink); border-color: var(--rule-2); }
+  .stock-chip:disabled:hover small { color: var(--ink-3); opacity: 1; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: 12px; line-height: 1; padding: 5px 9px; border-radius: 999px; background: var(--paper-2); color: var(--ink-2); }
+  .src { font: 500 11px var(--f-mono); color: var(--ink-3); letter-spacing: .02em; white-space: nowrap; }
+  .item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
+
+  /* 新聞事件 */
+  .news-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 36px; counter-reset: news; }
+  .news-item { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: 14px; counter-increment: news; }
+  /* 序號是純裝飾（清單本身已是 <ol>），以 CSS 計數器產生，不進入文字內容。 */
+  .news-no::before { content: counter(news, decimal-leading-zero); }
+  .news-no { font-family: var(--f-display); font-size: 2.4rem; line-height: .95; color: var(--rule-2); }
+  .news-title { margin: 0 0 10px; font-family: var(--f-head); font-weight: 700; font-size: 1.14rem; line-height: 1.6; }
+  .news-body { margin: 12px 0 0; color: var(--ink-2); line-height: 1.9; }
+  .news-view {
+    margin: 14px 0 0; padding: 2px 0 2px 16px; border-left: 2px solid var(--accent);
+    line-height: 1.85; color: var(--ink);
+  }
+  .news-view b, .lbl { display: block; font: 600 11px/1.6 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); margin-bottom: 2px; }
+
+  /* 產業動態 */
+  .ind-list { display: grid; gap: 24px; }
+  .ind { background: var(--card); border: 1px solid var(--rule); border-radius: 22px; overflow: hidden; }
+  .ind-head { padding: 26px 26px 22px; background: var(--band); color: var(--band-ink); }
+  .ind-head .tags { margin-top: 16px; }
+  .ind-head .tag { background: rgba(255,255,255,.1); color: rgba(255,255,255,.82); }
+  .ind-kp { margin: 0; font-family: var(--f-head); font-weight: 800; font-size: clamp(1.2rem, 2.5vw, 1.6rem); line-height: 1.45; letter-spacing: .01em; }
+  .ind-title { margin: 10px 0 0; font-size: 14px; line-height: 1.7; opacity: .72; }
+  .ind-ctx { display: grid; gap: 18px; padding: 24px 26px; margin: 0; }
+  .ind-ctx dt { font: 600 11px/1.6 var(--f-mono); letter-spacing: .1em; color: var(--accent); margin-bottom: 4px; }
+  .ind-ctx dd { margin: 0; line-height: 1.85; color: var(--ink-2); }
+  .ind-signals { display: grid; margin: 0; border-top: 1px solid var(--rule); }
+  .ind-signals > div { padding: 16px 26px; border-bottom: 1px solid var(--rule); }
+  .ind-signals > div:last-child { border-bottom: 0; }
+  .sig-label { font: 600 11px/1.6 var(--f-mono); letter-spacing: .08em; color: var(--ink-3); margin-bottom: 4px; }
+  .ind-signals dd { margin: 0; font-size: 14px; line-height: 1.75; }
+  .ind-converge {
+    margin: 20px 26px 0; padding: 16px 18px; border-radius: 14px;
+    background: var(--hl-bg); font-weight: 600; line-height: 1.8;
+  }
+  .ind-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 20px 26px 24px; }
+  .ind-foot .src { margin-left: auto; }
+
+  /* 標的觀點 */
+  .tg-list { list-style: none; margin: 0; padding: 0; border-top: 2px solid var(--ink); }
+  .tg { display: grid; gap: 12px 28px; padding: 24px 0; border-bottom: 1px solid var(--rule); }
+  .tg-name { margin: 0; font-family: var(--f-head); font-weight: 700; font-size: 1.16rem; line-height: 1.45; }
+  .tg-cat { margin: 4px 0 0; font-size: 12px; color: var(--ink-3); }
+  .tg-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .stance {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;
+    padding: 4px 11px 4px 9px; border-radius: 999px; line-height: 1.3;
+  }
+  .stance svg { width: 10px; height: 10px; }
+  .stance--up { color: var(--up); background: var(--up-bg); }
+  .stance--down { color: var(--down); background: var(--down-bg); }
+  .stance--flat { color: var(--flat); background: var(--flat-bg); }
+  .risk { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); font-weight: 600; }
+  .risk-meter { display: inline-flex; gap: 3px; }
+  .risk-meter i { width: 12px; height: 6px; border-radius: 2px; background: var(--rule); }
+  .risk--1 .risk-meter i:nth-child(-n+1) { background: var(--down); }
+  .risk--2 .risk-meter i:nth-child(-n+2) { background: var(--hl); }
+  .risk--3 .risk-meter i:nth-child(-n+3) { background: var(--up); }
+  .tg-basis { margin: 0; font-size: 13px; line-height: 1.8; color: var(--ink-3); }
+  .tg-thesis { margin: 8px 0 0; line-height: 1.9; }
+  .tg .item-actions { margin-top: 14px; }
+
+  /* QA 心法 */
+  .qa-list { display: grid; gap: 24px; }
+  .qa { padding: clamp(22px, 4vw, 34px); border-radius: 22px; background: var(--paper-2); }
+  .qa-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+  .qa-title { margin: 0; font: 600 12px/1.6 var(--f-mono); letter-spacing: .06em; color: var(--ink-3); }
+  .qa-q { position: relative; margin: 14px 0 0; padding-left: 44px; font-family: var(--f-head); font-weight: 700; font-size: clamp(1.08rem, 2.1vw, 1.28rem); line-height: 1.65; }
+  .qa-q::before {
+    content: "Q"; position: absolute; left: 0; top: -.18em;
+    font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 2.6rem; line-height: 1; color: var(--accent);
+  }
+  .qa-points { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 14px; }
+  .qa-points li { padding-left: 18px; position: relative; line-height: 1.85; color: var(--ink-2); }
+  .qa-points li::before { content: ""; position: absolute; left: 0; top: .8em; width: 8px; height: 2px; background: var(--ink); }
+  .qa-points strong { color: var(--ink); }
+  .qa-conclusion { margin: 22px 0 0; padding: 16px 18px; border-radius: 14px; background: var(--card); font-weight: 600; line-height: 1.8; }
+
+  .ep-disclaimer {
+    margin-top: 8px; padding: 24px 0 0;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px;
+    font-size: 13px; color: var(--ink-3); border-top: 2px solid var(--ink);
+  }
+  .ep-disclaimer a {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--accent); font-weight: 700; text-decoration: none;
+    border-bottom: 1px solid currentColor; padding-bottom: 1px;
+  }
+  .ep-pending { padding: 40px 0; text-align: center; color: var(--ink-3); border: 1px dashed var(--rule-2); border-radius: 16px; margin-top: 32px; }
+
+  /* ── Footer（T-808）：免責、非官方標示、版權反映管道 ─────────────── */
+  .site-footer {
+    background: var(--band);
+    color: color-mix(in srgb, var(--band-ink) 72%, transparent);
+    padding: clamp(56px, 8vw, 96px) 0 40px;
+    font-size: 14px;
+    line-height: 1.8;
+  }
+  .site-footer .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter); }
+  .footer-brand {
+    font-family: var(--f-serif); font-weight: 700; color: var(--band-ink);
+    font-size: clamp(2.2rem, 8vw, 6.4rem); line-height: 1.05; letter-spacing: -.01em; margin: 0 0 40px;
+  }
+  .footer-brand em { font-family: var(--f-display); font-style: italic; font-weight: 400; }
+  .footer-cols { display: grid; gap: 32px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,.16); }
+  .site-footer a { color: var(--band-ink); text-decoration: underline; text-decoration-color: rgba(255,255,255,.35); text-underline-offset: 4px; }
+  .site-footer a:hover { text-decoration-color: currentColor; }
+  .site-footer .footer-disclaimer { max-width: 44em; color: color-mix(in srgb, var(--band-ink) 82%, transparent); }
+  .site-footer .footer-disclaimer strong { color: var(--band-ink); }
+  .site-footer .footer-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+  .footer-meta { margin: 40px 0 0; font: 500 11px/1.6 var(--f-mono); letter-spacing: .06em; color: color-mix(in srgb, var(--band-ink) 50%, transparent); }
+
+  /* ═══ 深入解讀 Modal（T-806）：改為由右側滑入的閱讀抽屜 ══════════ */
   .dd-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,.5);
+    background: rgba(18, 16, 12, .48);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
     z-index: 9999;
-    display: flex; align-items: stretch; justify-content: center;
+    display: flex; align-items: stretch; justify-content: flex-end;
+    animation: fade-in .3s ease both;
   }
+  @keyframes fade-in { from { opacity: 0; } }
+  /* T-2311（SPEC-023 §7.6）：合規免責彈窗。z-index 必須高於本檔**所有**
+     疊層（含 .copilot-panel／FAB 的 10001，見 B-034）——合規同意是
+     全站唯一的硬性閘門，任何面板都不得把它蓋住，否則彈窗雖已在 DOM
+     中正確開啟（`display:flex`），畫面上卻完全看不到。 */
+  .compliance-overlay {
+    position: fixed; inset: 0;
+    background: rgba(18,16,12,.6);
+    z-index: 20000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .compliance-modal {
+    width: 100%; max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 22px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow);
+  }
+  .compliance-title { font-family: var(--f-head); font-size: 1.2rem; font-weight: 800; margin: 0 0 12px; }
+  .compliance-intro { margin: 0 0 12px; font-size: 0.92rem; }
+  .compliance-list { margin: 0 0 16px; padding-left: 20px; font-size: 0.88rem; line-height: 1.75; color: var(--ink-2); }
+  .compliance-list li { margin-bottom: 10px; }
+  .compliance-check { display: flex; align-items: flex-start; gap: 8px; font-size: 0.9rem; margin-bottom: 18px; cursor: pointer; }
+  .compliance-submit {
+    background: var(--accent); color: var(--accent-ink); border: none; border-radius: 999px;
+    padding: 10px 22px; font-size: 0.92rem; font-weight: 600; cursor: pointer;
+  }
+  .compliance-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+  .compliance-error { margin-top: 10px; color: var(--up); font-size: 0.85rem; }
   .dd-modal {
-    width: 100%; max-width: 1400px;
-    height: 100vh;
+    width: 100%; max-width: 880px;
+    height: 100%;
     display: flex; flex-direction: column;
     background: var(--dd-bg);
     overflow: hidden;
-    box-shadow: -4px 0 32px rgba(0,0,0,.2);
+    box-shadow: -24px 0 60px -20px rgba(0,0,0,.35);
+    animation: sheet-in .5s var(--ease-out) both;
   }
+  @keyframes sheet-in { from { transform: translateX(48px); opacity: 0; } }
   .dd-grid {
     flex: 1;
     display: grid;
-    /* 恆為三軌＋一條左中欄拖拉分隔線（收摺時右欄壓縮為 0% 而非移除軌道，
-       瀏覽器才能對 grid-template-columns 做平滑補間，避免中欄輸入框跳動（T-109）。
-       左中欄比例可由使用者拖拉調整，拖拉時以 inline style 覆蓋此處預設值。
-       D 區（對話功能）已 physically 移除，中欄恆為空，故左欄改為全寬、
-       中欄與拖拉分隔線軌道歸零，避免右側 75% 留白（與下方 #dd-col-resizer
-       的 display:none 相呼應）。 */
+    /* 恆為三軌＋一條左中欄拖拉分隔線。D 區（對話功能）已 physically 移除，
+       中欄恆為空，故左欄為全寬、中欄與拖拉分隔線軌道歸零（與下方
+       #dd-col-resizer 的 display:none 相呼應）。 */
     grid-template-columns: 100% 0 0 0;
     transition: grid-template-columns .25s ease;
     overflow: hidden;
@@ -226,248 +919,271 @@
   .dd-col-left, .dd-col-center, .dd-col-right {
     overflow-y: auto; overflow-x: hidden;
     min-height: 0;
+    overscroll-behavior: contain;
   }
-  .dd-col-left { border-right: 1px solid #E5E7EB; }
-  .dd-col-center { border-right: 1px solid #E5E7EB; }
   .dd-col-resizer {
     /* 軌道已於 .dd-grid 歸零，這裡另外 display:none，雙重確保不留下可
-       hover／可聚焦的殘影（元素隱藏後無法收到 mousedown，
-       _ddInitColumnResizer 的拖曳監聽器自然失效）。 */
+       hover／可聚焦的殘影（_ddInitColumnResizer 的拖曳監聽器自然失效）。 */
     display: none;
     width: 5px;
     cursor: col-resize;
-    background: transparent;
-    position: relative;
-    z-index: 5;
-  }
-  .dd-col-resizer:hover, .dd-col-resizer.dd-resizing {
-    background: var(--dd-accent, #6366F1);
   }
   .dd-grid.dd-resizing { transition: none; user-select: none; }
-  .dd-grid.dd-resizing .dd-col-left,
-  .dd-grid.dd-resizing .dd-col-center,
-  .dd-grid.dd-resizing .dd-col-right { pointer-events: none; }
-  .dd-notebook-toggle {
-    flex-shrink: 0; width: 27px; height: 27px; margin-right: 4px;
+  .dd-notebook-toggle, .dd-close {
+    flex-shrink: 0; width: 38px; height: 38px;
     display: flex; align-items: center; justify-content: center;
-    border: none; background: transparent; cursor: pointer;
-    border-radius: 5px; color: #64748B; font-size: 13px;
-    transition: background .12s, color .12s;
+    border: 1px solid var(--rule-2); background: var(--card); cursor: pointer;
+    border-radius: 50%; color: var(--ink); font-size: 14px;
+    transition: background .15s, color .15s, border-color .15s;
   }
-  .dd-notebook-toggle:hover { background: var(--dd-border); color: #0F172A; }
-  .dd-notebook-toggle.active { color: var(--dd-accent); }
+  .dd-close:hover, .dd-notebook-toggle:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .dd-header {
-    background: var(--dd-surface);
-    border-bottom: 1px solid var(--dd-border);
-    position: sticky; top: 0; z-index: 20;
-    padding: 13px 20px 11px;
+    background: var(--dd-bg);
+    border-bottom: 1px solid var(--rule);
+    padding: 22px clamp(20px, 4vw, 36px) 18px;
     flex-shrink: 0;
   }
-  .dd-header-row {
-    display: flex; align-items: flex-start;
-    justify-content: space-between; gap: 10px;
-    margin-bottom: 7px;
-  }
-  .dd-header-left { flex: 1; }
-  .dd-meta {
-    display: flex; align-items: center;
-    gap: 7px; flex-wrap: wrap; margin-bottom: 4px;
-  }
-  .dd-meta-tag {
-    font-size: 10px; font-weight: 700;
-    letter-spacing: .07em; text-transform: uppercase; color: #64748B;
-  }
+  .dd-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+  .dd-header-left { flex: 1; min-width: 0; }
+  .dd-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dd-meta-tag { font: 500 11px/1.4 var(--f-mono); letter-spacing: .04em; color: var(--ink-3); }
   .dd-block-chip {
-    padding: 2px 7px; border-radius: 3px;
-    border: 1px solid var(--dd-border);
-    font-size: 10px; font-weight: 600; color: #64748B;
+    padding: 3px 9px; border-radius: 999px; background: var(--ink); color: var(--paper);
+    font-size: 11.5px; font-weight: 600;
   }
-  .dd-src-mono {
-    font-family: monospace; font-size: 10px; color: #4B5563;
-  }
-  .dd-title {
-    font-size: 14px; font-weight: 700;
-    color: #0F172A; line-height: 1.4;
-  }
-  .dd-close {
-    flex-shrink: 0; width: 27px; height: 27px;
-    display: flex; align-items: center; justify-content: center;
-    border: none; background: transparent; cursor: pointer;
-    border-radius: 5px; color: #6B7280; font-size: 15px;
-    transition: background .12s, color .12s;
-  }
-  .dd-close:hover { background: var(--dd-border); color: #0F172A; }
-  .dd-lead {
-    border-left: 2px solid var(--dd-border);
-    padding-left: 10px;
-    font-size: 12px; color: #64748B; line-height: 1.55;
-  }
-  .dd-lead strong { color: #334155; }
-  .dd-col-left::-webkit-scrollbar, .dd-col-center::-webkit-scrollbar, .dd-col-right::-webkit-scrollbar { width: 3px; }
-  .dd-col-left::-webkit-scrollbar-thumb, .dd-col-center::-webkit-scrollbar-thumb, .dd-col-right::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 2px; }
+  .dd-src-mono { font: 500 11px var(--f-mono); color: var(--ink-3); }
+  .dd-title { font-family: var(--f-head); font-size: clamp(1.2rem, 2.5vw, 1.6rem); font-weight: 800; line-height: 1.45; }
+  .dd-lead { padding-left: 14px; border-left: 2px solid var(--accent); font-size: 14px; color: var(--ink-2); line-height: 1.8; }
+  .dd-lead:empty { display: none; }
+  .dd-lead strong { color: var(--ink); }
+  .dd-col-left::-webkit-scrollbar { width: 6px; }
+  .dd-col-left::-webkit-scrollbar-thumb { background: var(--rule-2); border-radius: 3px; }
   .dd-zone-bar {
     position: sticky; top: 0; z-index: 10;
-    background: #F1F5F9;
-    border-bottom: 1px solid #E5E7EB;
-    padding: 6px 20px;
-    display: flex; align-items: center; gap: 8px;
+    background: color-mix(in srgb, var(--paper-2) 94%, transparent);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    padding: 9px clamp(20px, 4vw, 36px);
+    display: flex; align-items: center; gap: 10px;
   }
   .dd-zone-id {
-    font-size: 9px; font-weight: 800;
-    letter-spacing: .16em; text-transform: uppercase;
-    color: #9CA3AF; background: #E5E7EB;
-    padding: 1px 5px; border-radius: 3px;
+    width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--f-display); font-style: italic; font-size: 15px;
+    color: var(--paper); background: var(--ink); border-radius: 50%;
   }
-  .dd-zone-name { font-size: 11px; font-weight: 600; color: #6B7280; }
-  .dd-zone-right {
-    margin-left: auto; font-size: 10px;
-    color: #9CA3AF; font-family: monospace;
+  .dd-zone-name { font-size: 12.5px; font-weight: 700; color: var(--ink); letter-spacing: .02em; }
+  .dd-zone-right { margin-left: auto; font: 500 11px var(--f-mono); color: var(--ink-3); }
+  .dd-zone-a, .dd-zone-c, .dd-zone-coverage { padding: 22px clamp(20px, 4vw, 36px) 30px; }
+  .dd-fh, .dd-tsec-head, .dd-afh {
+    font: 600 11px/1.6 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); margin-bottom: 6px;
   }
-  .dd-zone-a { padding: 16px 20px 20px; }
-  .dd-fh {
-    font-size: 9px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase;
-    color: #9CA3AF; margin-bottom: 5px;
+  .dd-afh { display: flex; align-items: center; gap: 10px; }
+  .dd-afh::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+  .dd-prose, .dd-afb { font-size: 14.5px; line-height: 1.9; color: var(--ink); }
+  .dd-afb-lg { font-family: var(--f-head); font-size: 1.15rem; font-weight: 700; line-height: 1.6; }
+  .dd-field { margin-bottom: 16px; }
+  .dd-name { font-family: var(--f-head); font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
+  .dd-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 10px; }
+  .dd-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dd-tag { padding: 4px 9px; border-radius: 999px; background: var(--paper-2); font-size: 12px; color: var(--ink-2); }
+  .dd-q { font-family: var(--f-head); font-size: 1.08rem; font-weight: 700; line-height: 1.65; margin-bottom: 14px; }
+  .dd-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .dd-list li { line-height: 1.8; }
+  .dd-list li div { color: var(--ink-2); font-size: 14px; }
+  .dd-region { margin-bottom: 8px; }
+  .dd-region span { display: inline-block; min-width: 24px; font: 600 11px var(--f-mono); color: var(--ink-3); margin-right: 6px; }
+  .dd-pre { white-space: pre-line; }
+  .dd-divider { height: 1px; background: var(--rule); margin: 18px 0; }
+  .dd-hl-box, .dd-warn-box, .dd-box-trend, .dd-box-host {
+    padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.85;
   }
-  .dd-prose {
-    font-size: 13px; line-height: 1.78; color: #111827;
-  }
-  .dd-divider { height: 1px; background: #E5E7EB; margin: 14px 0; }
-  .dd-hl-box {
-    border-left: 3px solid #9CA3AF;
-    padding: 9px 12px; background: #F1F5F9;
-    border-radius: 0 5px 5px 0;
-    font-size: 13px; line-height: 1.72; color: #111827;
-  }
-  .dd-warn-box {
-    border: 1px solid var(--dd-amber); background: #FFFBEB;
-    border-radius: 6px; padding: 9px 12px;
-    font-size: 12px; line-height: 1.65; color: #92400E;
-  }
-  .dd-box-trend {
-    border-left: 3px solid var(--dd-emerald);
-    padding: 9px 12px; background: #ECFDF5;
-    border-radius: 0 5px 5px 0;
-    font-size: 13px; line-height: 1.72; color: #065F46;
-  }
-  .dd-box-host {
-    border-left: 3px solid var(--dd-violet);
-    padding: 9px 12px; background: #F5F3FF;
-    border-radius: 0 5px 5px 0;
-    font-size: 13px; line-height: 1.72; color: #5B21B6;
-  }
+  .dd-hl-box { background: var(--hl-bg); color: var(--ink); font-weight: 600; }
+  .dd-warn-box { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--hl); border-radius: 0 12px 12px 0; }
+  .dd-box-trend { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--down); border-radius: 0 12px 12px 0; }
+  .dd-box-host { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--pod-mk); border-radius: 0 12px 12px 0; }
   .dd-capture-btn {
-    flex-shrink: 0; margin-left: auto; border: 1px solid var(--dd-border); background: var(--dd-surface);
-    border-radius: 5px; padding: 3px 8px; font-size: 10px; color: #64748B;
-    cursor: pointer; transition: transform .12s ease, border-color .12s ease;
+    flex-shrink: 0; margin-left: auto; border: 1px solid var(--rule); background: var(--card);
+    border-radius: 999px; padding: 3px 10px; font-size: 11px; color: var(--ink-3); cursor: pointer;
   }
-  .dd-capture-btn:hover { transform: scale(1.06); border-color: var(--dd-accent); color: var(--dd-accent); }
-  .dd-zone-b { background: #F1F5F9; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
-  .dd-drift-bar {
-    padding: 5px 20px; border-bottom: 1px solid #E5E7EB;
-    font-size: 10px; color: #9CA3AF; font-style: italic;
-  }
-  .dd-tsec { padding: 10px 20px; }
-  .dd-tsec-head {
-    font-size: 9px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase;
-    color: #9CA3AF; margin-bottom: 5px;
-  }
-  .dd-tsec-matched .dd-tsec-head { color: #6B7280; }
+  .dd-zone-b { background: var(--paper-2); }
+  .dd-drift-bar { padding: 8px clamp(20px, 4vw, 36px); border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); font-style: italic; }
+  .dd-tsec { padding: 16px clamp(20px, 4vw, 36px); }
+  .dd-tsec-dim { opacity: .55; }
   .dd-tsec-text {
-    font-family: 'JetBrains Mono','Fira Code',Consolas,monospace;
-    font-size: 11.5px; line-height: 1.85;
-    color: #9CA3AF;
-    white-space: pre-wrap; word-break: break-word;
+    font-family: var(--f-mono); font-size: 13px; line-height: 2;
+    color: var(--ink-3); white-space: pre-wrap; word-break: break-word;
   }
-  .dd-tsec-matched .dd-tsec-text { color: #111827; }
-  .dd-tsep { height: 1px; background: #E5E7EB; margin: 0 20px; }
-  .dd-zone-c { padding: 16px 20px 26px; }
-  .dd-zone-coverage-wrap { border-top: 1px solid #E5E7EB; }
-  .dd-zone-coverage { padding: 16px 20px 26px; }
-  .dd-coverage-meta {
-    font-size: 11px; color: #6B7280; margin-bottom: 14px;
-  }
-  .dd-coverage-stale { color: #B45309; font-weight: 600; }
-  .dd-coverage-badge {
-    padding: 12px 20px; font-size: 12px; color: #9CA3AF;
-    border-top: 1px solid #E5E7EB;
-  }
+  .dd-tsec-matched { background: var(--card); border-left: 3px solid var(--accent); }
+  .dd-tsec-matched .dd-tsec-head { color: var(--accent); }
+  .dd-tsec-matched .dd-tsec-text { color: var(--ink); }
+  .dd-tsep { height: 1px; background: var(--rule); }
+  .dd-zone-coverage-wrap { border-top: 1px solid var(--rule); }
+  .dd-coverage-meta { font-size: 12px; color: var(--ink-3); margin-bottom: 14px; }
+  .dd-coverage-stale { color: var(--up); font-weight: 600; }
+  .dd-coverage-badge { padding: 14px clamp(20px, 4vw, 36px); font-size: 12px; color: var(--ink-3); border-top: 1px solid var(--rule); }
   .dd-ai-notice {
-    border: 1px solid #FDE68A; background: #FEFCE8;
-    border-radius: 6px; padding: 8px 12px;
-    font-size: 11px; color: #374151; line-height: 1.5;
-    margin-bottom: 16px;
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 22px;
+    background: var(--paper-2); font-size: 13px; color: var(--ink-2); line-height: 1.7;
   }
-  .dd-af { margin-bottom: 16px; }
+  .dd-af { margin-bottom: 20px; }
   .dd-af:last-child { margin-bottom: 0; }
-  .dd-afh {
-    font-size: 9px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase;
-    color: #9CA3AF; margin-bottom: 6px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .dd-afh::after { content: ''; flex: 1; height: 1px; background: #E5E7EB; }
-  .dd-afb { font-size: 13px; line-height: 1.78; color: #111827; }
-  .dd-afb-lg { font-size: 15px; font-weight: 700; color: #111827; line-height: 1.45; }
-  .dd-supply-grid {
-    display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px; margin-top: 4px;
-  }
-  .dd-supply-card {
-    border: 1px solid #E5E7EB; border-radius: 6px;
-    padding: 9px 10px; background: #ffffff;
-    cursor: pointer; transition: border-color .15s ease;
-  }
-  .dd-supply-card:hover { border-color: #818CF8; }
-  .dd-sc-head {
-    font-size: 9px; font-weight: 700;
-    color: #9CA3AF; letter-spacing: .08em; margin-bottom: 5px;
-  }
-  .dd-sc-body { font-size: 11px; color: #6B7280; line-height: 1.55; }
-  .dd-chain-pos {
-    display: flex; align-items: center; margin: 6px 0;
-  }
-  .dd-chain-seg {
-    flex: 1; text-align: center;
-    padding: 7px 4px; border: 1px solid #E5E7EB;
-    font-size: 10px; color: #9CA3AF;
-  }
-  .dd-chain-seg.active {
-    background: #F1F5F9; color: #111827;
-    font-weight: 700; border-color: #6B7280;
-  }
-  .dd-chain-seg:first-child { border-radius: 5px 0 0 5px; }
-  .dd-chain-seg:last-child { border-radius: 0 5px 5px 0; }
-  .dd-chain-seg + .dd-chain-seg { border-left: none; }
-  .dd-watch-list { list-style: none; }
-  .dd-watch-list li {
-    display: flex; align-items: flex-start; gap: 7px;
-    font-size: 12px; line-height: 1.65;
-    color: #111827; padding: 4px 0;
-    border-bottom: 1px solid #E5E7EB;
-  }
-  .dd-watch-list li:last-child { border-bottom: none; }
-  .dd-watch-list li::before {
-    content: '›'; color: #9CA3AF; flex-shrink: 0;
-    margin-top: 1px; font-size: 14px;
-  }
-  .dd-footer-line {
-    font-size: 11px; color: #9CA3AF;
-    margin-top: 18px; padding-top: 14px;
-    border-top: 1px solid #E5E7EB;
-  }
+  .dd-supply-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 4px; }
+  .dd-supply-card { border: 1px solid var(--rule); border-radius: 14px; padding: 12px 14px; background: var(--card); }
+  .dd-sc-head { font: 600 11px/1.6 var(--f-mono); color: var(--accent); letter-spacing: .08em; margin-bottom: 4px; }
+  .dd-sc-body { font-size: 13.5px; color: var(--ink-2); line-height: 1.75; }
+  .dd-footer-line { font-size: 12px; color: var(--ink-3); margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .dd-empty { padding: 72px 24px; text-align: center; color: var(--ink-3); font-size: 14px; }
   .dd-footer {
     flex-shrink: 0;
-    border-top: 1px solid #E5E7EB;
-    padding: 7px 20px;
+    border-top: 1px solid var(--rule);
+    padding: 10px clamp(20px, 4vw, 36px);
     display: flex; align-items: center;
     justify-content: space-between; gap: 10px;
-    background: #ffffff;
+    background: var(--dd-bg);
   }
-  .dd-footer-note { font-size: 10px; color: #9CA3AF; }
-  .dd-footer-id { font-size: 10px; color: #9CA3AF; font-family: monospace; }
-  /* 深入解讀按鈕（加在現有卡片裡） */
+  .dd-footer-note { font-size: 11px; color: var(--ink-3); }
+  .dd-footer-id { font: 500 10px var(--f-mono); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ═══ Copilot 對話工作台（T-2713，spec-027 §2.3）══════════════════
+     獨立於深入解讀之外的另一個疊層，刻意不設遮罩背景，左側內容維持
+     可見、可獨立捲動（PRD 4.1-D）。z-index 高於 .dd-overlay（9999），
+     **但低於 .compliance-overlay**（B-034）——面板開著時若觸發
+     `403 compliance_required`，合規彈窗必須蓋過本面板，不得反過來。 */
+  .copilot-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 440px;
+    max-width: 100vw;
+    background: var(--card);
+    color: var(--ink);
+    border-left: 1px solid var(--rule);
+    box-shadow: -24px 0 60px -24px rgba(0,0,0,.35);
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* 桌機（≥900px）面板開啟時閱讀區收窄置中至 800px——規則併入下方既有
+     的 T-1101 雙欄斷點區塊，不另立第二個同斷點的規則。 */
+  .copilot-panel-header {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+    padding: 16px 20px 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .copilot-panel-title { font-family: var(--f-head); font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.45; }
+  .copilot-panel-close {
+    flex-shrink: 0; width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rule-2); background: transparent; cursor: pointer;
+    border-radius: 50%; color: var(--ink); font-size: 13px;
+    transition: background .15s, color .15s;
+  }
+  .copilot-panel-close:hover { background: var(--ink); color: var(--paper); }
+  .copilot-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+  /* 「產業全景速覽」收折工具條（spec-028 §7.4，T-2813）。收折態總高度
+     恆為標頭的 36px；**預設收折，桌機與手機一致**（Q28-C）——此處不寫
+     任何依斷點變化的規則。 */
+  .copilot-overview-toolbar {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .copilot-overview-toolbar-header {
+    height: 36px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px;
+    cursor: pointer;
+    font-size: 12.5px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft);
+    user-select: none;
+  }
+  .copilot-overview-toolbar-body {
+    padding: 12px;
+  }
+  /* 第三段：固定底部 Composer 容器（spec-028 §7.2 S-2）。`flex-shrink:0`
+     使其不隨 `.copilot-panel-body` 的捲動而位移。容器本身不設
+     `overflow-y`——工作台唯一的捲動軸仍是 `.copilot-panel-body`。
+     不在此處加 border-top（composer 自身已有，重複會成雙線）。 */
+  .copilot-panel-footer {
+    flex-shrink: 0;
+    padding: 0 20px 16px;
+  }
+  #copilot-panel textarea {
+    background: var(--paper); color: var(--ink); border-color: var(--rule-2) !important;
+    border-radius: 12px !important; font-family: var(--f-sans);
+  }
+
+  /* 手機斷點（<900px）：底部抽屜呈現，高度 86vh（spec §2.3）。判定邏輯
+     在 JS 端（lite-app.js 的 `_isMobileViewport()`），這裡只負責呈現。 */
+  .copilot-panel.copilot-panel-mobile-drawer {
+    top: auto;
+    left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 86vh;
+    border-radius: 22px 22px 0 0;
+    border-left: 0;
+  }
+  .copilot-fab {
+    position: fixed;
+    right: 20px; bottom: 20px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    z-index: 10001; /* 與 .copilot-panel 同層——懸浮鈕本身就是它在手機下的開啟／喚回方式。 */
+  }
+  .copilot-fab:hover { background: var(--accent); }
+
+  /* T-2504（SPEC-025 §7.2）：個人化選項 chip。選取狀態的實際來源是
+     lite-app.js 的 _copilotSelection——.is-selected 只是把狀態畫出來。 */
+  .copilot-option-group { margin-bottom: 16px; }
+  .copilot-option-label { font: 600 11px/1.6 var(--f-mono); letter-spacing: .08em; color: var(--ink-3); margin-bottom: 6px; }
+  .copilot-option-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .copilot-chip {
+    padding: 6px 13px; border-radius: 999px;
+    border: 1px solid var(--rule-2); background: transparent;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+    cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+  }
+  .copilot-chip:hover { border-color: var(--ink); color: var(--ink); }
+  .copilot-chip.is-selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  /* T-2506（SPEC-025 §7.4）：剩餘次數常駐顯示。文字與 disabled 狀態的來源
+     是 lite-app.js 的 _refreshCopilotQuota()。 */
+  .copilot-quota {
+    font-size: 12.5px; color: var(--ink-2);
+    margin-bottom: 12px; padding: 8px 12px;
+    background: var(--paper-2); border-radius: 10px;
+  }
+  .copilot-quota.is-exhausted { color: var(--up); background: var(--up-bg); }
+
+  /* ── 響應式 ─────────────────────────────────────────────────────── */
+  @media (min-width: 640px) {
+    .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .trend-cols { grid-template-columns: 1fr 1fr; gap: 48px; }
+    .ind-ctx { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    .ind-signals { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ind-signals > div { border-bottom: 0; border-right: 1px solid var(--rule); }
+    .ind-signals > div:last-child { border-right: 0; }
+    .tg { grid-template-columns: 210px minmax(0, 1fr); }
+    .dd-supply-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .filter-group--pods { flex: 0 1 auto; }
+    .news-item { grid-template-columns: 64px minmax(0, 1fr); column-gap: 20px; }
+    .news-no { font-size: 3rem; }
+  }
 
   /* ── 雙欄斷點（T-1101，spec-011 §7.1）───────────────────────────────
      ≥900px：卡片容器轉為兩欄，.site-main 容納寬度放寬至 1200px。
@@ -479,53 +1195,236 @@
     .site-main {
       max-width: 1200px;
     }
+    /* T-2713（spec-027 §2.3）：面板開啟時閱讀區收窄置中至 800px（電腦端
+       雙欄）。以選擇器特異度覆蓋上面的 1200px——兩者刻意共用同一個
+       900px 斷點，不是巧合。 */
+    body.copilot-panel-open .site-main {
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    /* 閱讀器同理：面板開著時讓出右側 440px，導讀全文不被蓋住（PRD 4.1-D）。 */
+    body.copilot-panel-open .reader { right: 440px; }
+    .tile--lead { grid-column: span 2; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 40px; }
+    .tile--lead .tile-main, .tile--lead .tile-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .tile--lead .tile-side { padding-left: 20px; margin-left: -20px; border-left: 1px solid var(--rule); padding-top: 26px; }
+    .tile--lead .tile-foot { grid-column: 1 / -1; }
+    .tile--lead .tile-tickers { margin-top: auto; }
+    .mast-nav { display: flex; }
+    .mast-about { display: none; }
+    .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 72px; }
+    .hero-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   }
+  @media (min-width: 1180px) {
+    .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .tile--lead { grid-column: span 2; }
+    .reader-layout { grid-template-columns: 200px minmax(0, 1fr); gap: 72px; }
+    .reader-toc { display: block; position: sticky; top: 24px; align-self: start; }
+  }
+  @media (max-width: 639px) {
+    .mast-about { display: none; }
+    .reader-back kbd { display: none; }
+    .tile { padding: 20px 18px 16px; }
+    .tile::before { left: 18px; }
+    .filter-inner { gap: 8px 12px; }
+    .result-count { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    .tape-track { animation: none; }
+    .tape { overflow-x: auto; }
+    .reveal-on .reveal { opacity: 1; transform: none; }
+  }
+
+  /* 列印：閱讀器開著時只印該集導讀；否則印列表。 */
+  @media print {
+    body { background: #fff; color: #000; font-size: 11pt; }
+    .site-header, .tape, .filter-bar, .reader-bar, .reader-toc, .reader-next, .reader-progress,
+    .copilot-fab, .pulse, .trending, .item-actions, .ind-foot .dd-more-btn, .ep-cta .ep-cta-note { display: none !important; }
+    body.is-locked > *:not(#reader) { display: none !important; }
+    .reader { position: static; display: block; }
+    .reader-scroll { overflow: visible; }
+    .tile, .ind, .qa { break-inside: avoid; box-shadow: none; }
+    a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 9pt; color: #555; }
+  }
+
+  /* 首屏進場：標題逐行升起、統計與脈動圖依序淡入。 */
+  .intro .hero-title .line > span { animation: rise 1s var(--ease-out) both; }
+  .intro .hero-title .line:nth-child(2) > span { animation-delay: .09s; }
+  .intro .hero-lede, .intro .eyebrow { animation: fade-up .9s var(--ease-out) .18s both; }
+  .intro .hero-stats { animation: fade-up .9s var(--ease-out) .28s both; }
+  @keyframes rise { from { transform: translateY(105%); } }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(14px); } }
+  .pulse-bar.is-grow { animation: bar-grow .9s var(--ease-out) both; animation-delay: calc(var(--i) * 9ms + .25s); }
+  @keyframes bar-grow { from { transform: scaleY(0); } }
 </style>
 </head>
-<body>
+<body class="intro">
+<a class="skip-link" href="#site-main">跳到導讀列表</a>
 
 <!-- ── 站台標頭 ─────────────────────────────────────────────────────── -->
 <header class="site-header" id="site-header">
-  <div>
-    <div class="brand">Podcast 財經導讀站</div>
-    <div class="brand-sub">非官方第三方專案・AI 生成摘要</div>
+  <div class="mast">
+    <a class="wordmark" href="./" aria-label="Podcast 財經導讀站，回首頁">
+      <svg class="wordmark-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="var(--accent)"/><g fill="var(--accent-ink)"><rect x="12" y="27" width="5" height="10" rx="2.5"/><rect x="21" y="18" width="5" height="28" rx="2.5"/><rect x="30" y="12" width="5" height="40" rx="2.5"/><rect x="39" y="22" width="5" height="20" rx="2.5"/><rect x="48" y="29" width="5" height="6" rx="2.5"/></g></svg>
+      <span class="brand"><em>Podcast</em>財經導讀站</span>
+    </a>
+    <nav class="mast-nav" aria-label="站內導覽">
+      <a href="#site-main">本期導讀</a>
+      <a href="#trending">熱門標的</a>
+      <a href="./about.html">關於本站</a>
+    </nav>
+    <div class="mast-spacer"></div>
+    <a class="mast-about" href="./about.html">關於</a>
+    <!-- T-2212（SPEC-022 §7.6）：Google 登入容器與登入後的使用者資訊。
+         兩者預設皆隱藏，由 lite-app.js 依實際登入狀態切換 display。
+         姓名／頭像僅存在於這裡的 DOM 與記憶體變數，永不寫入任何持久
+         儲存（PRD 4.7-③）。 -->
+    <div id="google-login-container" style="display:none;"></div>
+    <div id="google-user-info" style="display:none; align-items:center; gap:8px;">
+      <img id="google-user-avatar" alt="" style="width:28px;height:28px;border-radius:50%;">
+      <span id="google-user-name" style="font-size:0.85rem;"></span>
+      <button id="google-logout-button" type="button" class="ghost-btn">登出</button>
+    </div>
   </div>
-  <div style="flex:1"></div>
-  <!-- podcaster 篩選 chip（T-1205）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
-  <div id="podcaster-chips"></div>
-  <!-- 週別篩選（T-805）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
-  <select id="week-select" class="text-xs" style="background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 8px;"></select>
 </header>
 
-<!-- ── 內容容器：由 T-804（卡片）／T-805（導航）／T-806（深入解讀）填入 ── -->
-<main class="site-main" id="site-main">
+<!-- 新聞跑馬燈：由 lite-app.js 依已載入卡片的新聞事件標題填入 -->
+<nav class="tape" id="tape" aria-label="最新新聞事件"></nav>
+
+<!-- ── 首屏 ─────────────────────────────────────────────────────────── -->
+<section class="hero" aria-labelledby="hero-title">
+  <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span><span>非官方第三方專案</span><span aria-hidden="true">／</span><span>AI 生成導讀</span><span aria-hidden="true">／</span><span id="hero-range">—</span></p>
+  <h1 class="hero-title" id="hero-title"><span class="line"><span>一集財經 Podcast，</span></span><span class="line"><span>三分鐘讀完<em>重點</em>。</span></span></h1>
+  <div class="hero-grid">
+    <p class="hero-lede">把台灣財經節目拆成新聞事件、產業動態、標的觀點與 QA 心法。每一則都標出逐字稿位置，讀完再決定要不要回去聽完整集。</p>
+    <dl class="hero-stats" id="hero-stats">
+      <div class="hero-stat"><dt>集節目</dt><dd data-count="0">—</dd></div>
+      <div class="hero-stat"><dt>個節目</dt><dd data-count="0">—</dd></div>
+      <div class="hero-stat"><dt>則新聞事件</dt><dd data-count="0">—</dd></div>
+      <div class="hero-stat"><dt>則產業動態</dt><dd data-count="0">—</dd></div>
+      <div class="hero-stat"><dt>則標的觀點</dt><dd data-count="0">—</dd></div>
+      <div class="hero-stat"><dt>則 QA 心法</dt><dd data-count="0">—</dd></div>
+    </dl>
+  </div>
+  <figure class="pulse" id="pulse">
+    <div class="pulse-head">
+      <figcaption><strong>節目脈動</strong>　每一條是一集，由舊到新排列；高度是該集整理出的重點則數。點一下直接閱讀。</figcaption>
+      <ul class="legend" id="pulse-legend"></ul>
+    </div>
+    <div class="pulse-track" id="pulse-track"></div>
+    <div class="pulse-axis" id="pulse-axis" aria-hidden="true"></div>
+  </figure>
+</section>
+
+<!-- ── 熱門標的 ─────────────────────────────────────────────────────── -->
+<section class="trending" id="trending" aria-labelledby="trending-title">
+  <div class="section-inner">
+    <div class="section-head">
+      <h2 class="kicker-title" id="trending-title">最常被提起的標的</h2>
+      <p class="section-note">依提及集數排序。點選即可只看談到它的集數。</p>
+    </div>
+    <div class="trend-cols">
+      <div class="trend-col"><h3>台股</h3><ol class="trend-list" id="trend-tw"></ol></div>
+      <div class="trend-col"><h3>美股與指數</h3><ol class="trend-list" id="trend-us"></ol></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── 篩選列 ─────────────────────────────────────────────────────── -->
+<div class="filter-bar" id="filter-bar" role="region" aria-label="篩選導讀">
+  <div class="filter-inner">
+    <div class="filter-group filter-group--pods" role="group" aria-label="依節目篩選">
+      <span class="filter-label" aria-hidden="true">節目</span>
+      <!-- podcaster 篩選 chip（T-1205）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
+      <div id="podcaster-chips"></div>
+    </div>
+    <label class="filter-group">
+      <span class="filter-label">週別</span>
+      <!-- 週別篩選（T-805）：選項由 lite-app.js 依 notes/index.json 動態填入 -->
+      <select id="week-select" class="week-select"></select>
+    </label>
+    <div class="ticker-filter" id="ticker-filter" hidden></div>
+    <p class="result-count" id="result-count" aria-live="polite"></p>
+  </div>
+</div>
+
+<!-- ── 內容容器：週別分組的導讀磚（_renderCardList 會覆寫整個 innerHTML）── -->
+<main class="site-main" id="site-main" tabindex="-1">
   <div class="empty-state" id="empty-state">內容載入中…</div>
+  <noscript><div class="empty-state">本站的導讀卡需要啟用 JavaScript 才能顯示。</div></noscript>
 </main>
 
 <!-- ── Footer（T-808）：免責、非官方標示、版權反映管道 ─────────────── -->
 <footer class="site-footer" id="site-footer">
   <div class="footer-inner">
-    <div class="footer-disclaimer" id="footer-disclaimer">
-      本站為第三方非官方專案，與任何節目、主持人或製作單位皆無隸屬或合作關係。
-      內容由 AI 自動生成，可能有誤，<strong>不構成投資建議</strong>，請自行查證判斷，投資風險請自負。
+    <p class="footer-brand" aria-hidden="true"><em>Podcast</em><br>財經導讀站</p>
+    <div class="footer-cols">
+      <div class="footer-disclaimer" id="footer-disclaimer">
+        本站為第三方非官方專案，與任何節目、主持人或製作單位皆無隸屬或合作關係。內容由 AI 自動生成，可能有誤，<strong>不構成投資建議</strong>，請自行查證判斷，投資風險請自負。
+      </div>
+      <div class="footer-links" id="footer-links">
+        <a href="./about.html">關於本站</a>
+        <a href="./about.html#copyright">版權反映</a>
+      </div>
     </div>
-    <div class="footer-links" id="footer-links">
-      <a href="./about.html">關於本站</a>
-    </div>
+    <p class="footer-meta">資料期間 <span id="footer-range">—</span>　／　導讀內容以原節目為準</p>
   </div>
 </footer>
 
-<!-- ── Deep Dive Modal（T-806，逐字移植自 public/index.html:3190-3219）── -->
-<div id="dd-overlay" class="dd-overlay" style="display:none;" aria-modal="true" role="dialog">
+<!-- ── 閱讀器：單集導讀全文（網址 #/ep/<podcaster>/<slug> 可直接分享）── -->
+<div id="reader" class="reader" role="dialog" aria-modal="true" aria-label="導讀全文" tabindex="-1" hidden>
+  <div class="reader-progress" id="reader-progress"></div>
+  <div class="reader-bar">
+    <button type="button" class="reader-back" data-action="close-reader">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      返回列表 <kbd>Esc</kbd>
+    </button>
+    <span class="reader-pos" id="reader-pos"></span>
+    <div class="reader-steps">
+      <button type="button" class="icon-btn" id="reader-prev" data-action="reader-step" data-step="-1" aria-label="較新一集" title="較新一集（←）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="icon-btn" id="reader-next" data-action="reader-step" data-step="1" aria-label="較舊一集" title="較舊一集（→）"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+  </div>
+  <div class="reader-scroll" id="reader-scroll">
+    <div class="reader-body" id="reader-body"></div>
+  </div>
+</div>
+
+<!-- T-2311（SPEC-023 §7.6，PRD v3.3 附錄 D 定稿文案逐字）：合規免責彈窗。
+     登入成功後由 lite-app.js 呼叫 GET /api/me，compliance_agreed === false
+     時強制彈出；已同意者與未登入者不彈出。同意寫入一律呼叫
+     POST /api/compliance，不寫入任何本機持久化（PRD 4.7-③）。 -->
+<div id="compliance-overlay" class="compliance-overlay" style="display:none;" aria-modal="true" role="dialog">
+  <div class="compliance-modal" id="compliance-modal">
+    <h2 class="compliance-title">📋 產業研究特助｜使用條款與免責聲明</h2>
+    <p class="compliance-intro">歡迎使用產業透視全效卡服務。在啟用前，請詳細閱讀並確認以下事項：</p>
+    <ol class="compliance-list">
+      <li><strong>AI 知識推演性質</strong>：本服務產出之 8 大模組內容，係由大型語言模型結合通用公開產業知識生成，<strong>非節目主持人或製作團隊之觀點，亦非其發言內容</strong>。節目資料僅用於指定本次研究的產業主題。</li>
+      <li><strong>非證券投資顧問建議</strong>：報告內提及之任何產業環節、代表性公司代號、估值與商業評論，皆為產業結構之研究推演，<strong>絕不構成任何買賣訊號、標的推薦或投資顧問諮詢</strong>。</li>
+      <li><strong>數據時效性與盈虧自負</strong>：模型引用之毛利率及產業數據<strong>可能具備時效延遲或錯誤</strong>，使用者應獨立查證真實財報與市場公開資訊。一切投資決策與衍生損益，概由使用者自行承擔全責。</li>
+      <li><strong>資料使用與保存</strong>：本服務僅保存您的 Google 帳號識別碼（經單向雜湊處理）、同意時間與使用次數，<strong>不保存您的姓名、頭像或生成的報告內容</strong>。若您主動點擊「回報錯誤」，該次報告將在您同意後送交團隊分析並保存 90 天。</li>
+      <li><strong>網站流量分析（v3.2 新增）</strong>：本站使用 Google Analytics 4 了解頁面使用情形（造訪了哪些頁面、停留多久、是否使用本功能），用以判斷本服務是否值得繼續投入。此工具會在您的瀏覽器<strong>設置 Cookie</strong>，並將您的 <strong>IP 位址、裝置與瀏覽器資訊傳送至 Google</strong> 處理。<strong>此流量資料不會與上述經雜湊的帳號識別碼串接</strong>，我們無法藉此回推個別使用者的身分。您可透過瀏覽器設定封鎖 Cookie，或安裝 Google 官方的 Analytics 停用附加元件退出。</li>
+    </ol>
+    <label class="compliance-check">
+      <input type="checkbox" id="compliance-checkbox">
+      <span>我已詳細閱讀、充分理解並完全同意上述免責宣告</span>
+    </label>
+    <button type="button" id="compliance-submit" class="compliance-submit" disabled>同意並繼續</button>
+    <div id="compliance-error" class="compliance-error" style="display:none;">送出失敗，請稍後再試，或稍後重新整理頁面。</div>
+  </div>
+</div>
+
+<!-- ── Deep Dive Modal（T-806）── -->
+<div id="dd-overlay" class="dd-overlay" style="display:none;" aria-modal="true" role="dialog" aria-label="深入解讀">
   <div class="dd-modal" id="dd-modal">
-    <!-- 頭部（近黑色固定） -->
     <div class="dd-header" id="dd-header">
       <div class="dd-header-row">
         <div class="dd-header-left" id="dd-header-left">
           <!-- 由 JS 填入 -->
         </div>
         <button class="dd-notebook-toggle" id="dd-notebook-toggle" aria-label="顯示/隱藏筆記本" title="顯示/隱藏筆記本">📔</button>
-        <button class="dd-close" id="dd-close" aria-label="關閉">✕</button>
+        <button class="dd-close" id="dd-close" aria-label="關閉深入解讀"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3.5 3.5l9 9m0-9-9 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       </div>
       <div class="dd-lead" id="dd-lead"><!-- 由 JS 填入 --></div>
     </div>
@@ -538,13 +1437,45 @@
       <div class="dd-col-right" id="dd-col-right"><!-- 筆記本預留，未來實作 --></div>
     </div>
 
-    <!-- 固定底部 -->
     <div class="dd-footer">
       <span class="dd-footer-note">AI 生成內容，不構成投資建議。</span>
       <span class="dd-footer-id" id="dd-footer-id"></span>
     </div>
   </div>
 </div>
+
+<!-- T-2713（spec-027 §2.3）：Copilot 對話工作台面板。與上方 #dd-overlay
+     各自獨立的疊層，不共用 DOM 也不共用開關邏輯。對話工作台的互動內容
+     （專家選單、Composer、對話流）由 lite-app.js 動態填入，本檔只建立
+     容器骨架。 -->
+<div id="copilot-panel" class="copilot-panel" style="display:none;" aria-modal="true" role="dialog">
+  <div class="copilot-panel-header">
+    <div class="copilot-panel-title" id="copilot-panel-title"><!-- 由 JS 填入：該則產業動態或個股標題 --></div>
+    <button class="copilot-panel-close" id="copilot-panel-close" aria-label="關閉">✕</button>
+  </div>
+  <div class="copilot-panel-body" id="copilot-panel-body">
+    <!-- T-2813（spec-028 §7.4）：「產業全景速覽」收折工具條由 JS 的
+         `_ensureCopilotOverviewToolbar()` 動態建立於此處（僅產業主題）。 -->
+    <!-- T-2506（SPEC-025 §7.4）：剩餘次數常駐顯示。預設 hidden——未登入
+         時不顯示，登入後由 lite-app.js 的 _refreshCopilotQuota() 依
+         GET /api/me 的結果決定文字與是否顯示。 -->
+    <div class="copilot-quota" id="copilot-quota-text" hidden></div>
+    <!-- 串流輸出區（生成鍵、報告區、錯誤區）由 JS 動態插入於此之後，
+         見 lite-app.js 的 _ensureCopilotReportArea()。 -->
+  </div>
+  <!-- T-2808（spec-028 §7.2 S-2）：面板第三段，固定底部 Composer 容器。
+       靜態存在於初始 HTML——它必須是 `#copilot-panel` 的第 3 個直接子節點
+       以滿足 spec §7.2 條款 1／AC-04。內容由 `_ensureCopilotComposer()`
+       動態插入。 -->
+  <div class="copilot-panel-footer" id="copilot-panel-footer"></div>
+</div>
+
+<!-- T-2512（SPEC-025 §7.5 手機部分）：Copilot 懸浮鈕。桌機寬度下恆為
+     hidden（見 lite-app.js 的 _applyCopilotViewportMode()）；手機寬度
+     下只有在面板此前已被開過時點擊才會重新開啟。 -->
+<button id="copilot-fab" class="copilot-fab" hidden aria-label="開啟 Copilot">💬</button>
+
+<div class="pulse-tip" id="pulse-tip" role="tooltip" aria-hidden="true"></div>
 
 <script src="./assets/lite-app.js"></script>
 </body>

@@ -2,116 +2,183 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com; img-src 'self' data:; style-src 'self' 'unsafe-inline';">
 <title>關於本站 — Podcast 財經導讀站</title>
+<meta name="description" content="Podcast 財經導讀站是第三方非官方專案：導讀卡如何產生、隱私與流量分析、版權反映管道。">
+<meta name="theme-color" content="#F3EFE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121110" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./assets/fonts/fonts.css">
 <style>
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #f8fafc;
-    color: #0f172a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
-      "Microsoft JhengHei", sans-serif;
+  /* 與 index.html 共用同一組設計 token（色彩、字體、深色模式）。 */
+  :root {
+    --paper: #F3EFE7; --paper-2: #EAE4D8; --card: #FBF9F5;
+    --ink: #17140F; --ink-2: #48433A; --ink-3: #6C6558;
+    --rule: #DCD4C5; --rule-2: #C4B9A4;
+    --band: #17140F; --band-ink: #F6F2EA;
+    --accent: #BF3318; --accent-ink: #FFFFFF; --accent-soft: #F8DDD4;
+    --hl-bg: #FBEDC9;
+    --f-serif: "Noto Serif TC Display", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+    --f-display: "Instrument Serif", "Noto Serif TC Display", Georgia, serif;
+    --f-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --f-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --gutter: clamp(16px, 4vw, 48px);
+    color-scheme: light;
   }
-  a { color: #1d4ed8; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121110; --paper-2: #0C0B0A; --card: #1B1A17;
+      --ink: #F1ECE2; --ink-2: #C9C1B2; --ink-3: #9F9788;
+      --rule: #2F2C27; --rule-2: #4A453D;
+      --band: #26231F; --band-ink: #F6F2EA;
+      --accent: #FF6A4A; --accent-ink: #17140F; --accent-soft: #3A1D16;
+      --hl-bg: #33280F;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: var(--f-sans); font-size: 15px; line-height: 1.9;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-underline-offset: 4px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
 
   .site-header {
-    background: #0f172a;
-    color: #ffffff;
-    padding: 12px 20px;
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    backdrop-filter: saturate(1.4) blur(14px);
+    border-bottom: 1px solid var(--rule);
   }
-  .site-header .brand { font-weight: 700; font-size: 0.95rem; }
-  .site-header a { color: #93c5fd; font-size: 0.8rem; text-decoration: none; }
+  .mast { max-width: 1200px; margin: 0 auto; height: 64px; padding: 0 var(--gutter); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .wordmark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+  .wordmark svg { width: 30px; height: 30px; }
+  .brand { font-family: var(--f-serif); font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; white-space: nowrap; }
+  .brand em { font-family: var(--f-display); font-style: italic; font-weight: 400; font-size: 1.22em; letter-spacing: 0; margin-right: .28em; }
+  .back {
+    display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none;
+    font-size: 14px; font-weight: 600; padding: 8px 14px; border: 1px solid var(--rule-2); border-radius: 999px;
+    transition: background .2s, color .2s, border-color .2s;
+  }
+  .back:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .back svg { width: 16px; height: 16px; }
 
-  main {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 24px 16px 64px;
-    font-size: 0.9rem;
-    line-height: 1.75;
+  .hero { max-width: 1200px; margin: 0 auto; padding: clamp(48px, 9vw, 120px) var(--gutter) clamp(32px, 5vw, 64px); }
+  .eyebrow { margin: 0 0 24px; font: 500 12px/1.4 var(--f-mono); letter-spacing: .08em; color: var(--ink-3); }
+  h1 {
+    margin: 0; font-family: var(--f-serif); font-weight: 700;
+    font-size: clamp(2.6rem, 9vw, 7rem); line-height: 1.08; letter-spacing: -.015em;
+    animation: rise 1s var(--ease-out) both;
   }
-  h1 { font-size: 1.25rem; margin: 24px 0 8px; }
-  h2 { font-size: 1rem; margin: 28px 0 8px; }
-  section { margin-bottom: 8px; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { max-width: 32em; margin: 32px 0 0; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.9; color: var(--ink-2); animation: fade-up .9s var(--ease-out) .15s both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } }
+  @keyframes fade-up { from { opacity: 0; transform: translateY(12px); } }
+
+  .blocks { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) clamp(64px, 9vw, 120px); }
+  .block { display: grid; gap: 12px 48px; padding: clamp(32px, 5vw, 56px) 0; border-top: 1px solid var(--rule); }
+  .block:first-child { border-top: 2px solid var(--ink); }
+  .block-no { font-family: var(--f-display); font-style: italic; color: var(--accent); font-size: 1.2rem; line-height: 1; margin: 0 0 8px; }
+  h2 { margin: 0; font-family: var(--f-serif); font-weight: 700; font-size: clamp(1.35rem, 2.6vw, 1.9rem); line-height: 1.35; }
+  .block-body { max-width: 40em; color: var(--ink-2); }
+  .block-body p { margin: 0 0 14px; }
+  .block-body p:last-child { margin-bottom: 0; }
+  .block-body strong { color: var(--ink); }
   .warn-box {
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 8px;
-    padding: 12px 16px;
-    color: #92400e;
-    font-size: 0.85rem;
-    margin: 16px 0;
+    margin: 18px 0 0; padding: 18px 20px; border-radius: 16px; background: var(--hl-bg);
+    color: var(--ink); font-weight: 500;
   }
   .contact-box {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 16px;
-    margin: 12px 0;
+    margin-top: 20px; padding: 22px 24px; border-radius: 18px; background: var(--card); border: 1px solid var(--rule);
+  }
+  .contact-box .label { font: 600 11px/1.6 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); }
+  .contact-box a { display: inline-block; margin-top: 4px; font-family: var(--f-serif); font-weight: 700; font-size: clamp(1.05rem, 2.4vw, 1.35rem); color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--accent); word-break: break-all; }
+  .contact-box .note { margin-top: 10px; font-size: 13px; color: var(--ink-3); }
+
+  .site-footer { background: var(--band); color: color-mix(in srgb, var(--band-ink) 70%, transparent); }
+  .site-footer .inner { max-width: 1200px; margin: 0 auto; padding: 40px var(--gutter); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; font-size: 13px; }
+  .site-footer a { color: var(--band-ink); }
+
+  @media (min-width: 900px) {
+    .block { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
 
 <header class="site-header">
-  <span class="brand">Podcast 財經導讀站</span>
-  <a href="./index.html">← 回首頁</a>
+  <div class="mast">
+    <a class="wordmark" href="./index.html" aria-label="Podcast 財經導讀站，回首頁">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="var(--accent)"/><g fill="var(--accent-ink)"><rect x="12" y="27" width="5" height="10" rx="2.5"/><rect x="21" y="18" width="5" height="28" rx="2.5"/><rect x="30" y="12" width="5" height="40" rx="2.5"/><rect x="39" y="22" width="5" height="20" rx="2.5"/><rect x="48" y="29" width="5" height="6" rx="2.5"/></g></svg>
+      <span class="brand"><em>Podcast</em>財經導讀站</span>
+    </a>
+    <a class="back" href="./index.html"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>回首頁</a>
+  </div>
 </header>
 
 <main>
-  <h1>關於本站</h1>
-  <section>
-    這是一個個人 Side Project，把財經 podcast 節目的內容整理成結構化的導讀卡，
-    方便讀者在幾分鐘內掌握一集節目的重點，再自行決定要不要回去聽完整內容。
-  </section>
+<section class="hero">
+  <p class="eyebrow">ABOUT ／ 非官方第三方專案</p>
+  <h1>關於<em>本站</em></h1>
+  <p class="lede">這是一個個人 Side Project，把財經 podcast 節目的內容整理成結構化的導讀卡，方便讀者在幾分鐘內掌握一集節目的重點，再自行決定要不要回去聽完整內容。</p>
+</section>
 
-  <h2>這不是官方服務</h2>
-  <section>
-    本站與任何節目、主持人或製作單位<strong>皆無隸屬或合作關係</strong>，是第三方非官方專案。
-    站上不使用任何原節目的 Logo 或官方視覺識別。
-  </section>
-
-  <h2>內容如何產生</h2>
-  <section>
-    每張導讀卡的內容皆由程式自動抓取節目逐字稿，並透過 AI 模型整理、摘要與延伸解讀生成，
-    不是由本站人工撰寫，也不代表主持人本人的完整立場或原話。
-  </section>
-
-  <div class="warn-box">
-    ⚠ 本站內容<strong>非投資建議</strong>。AI 生成內容可能有誤，請自行查證並判斷，
-    投資有風險，盈虧請自行負責。
-  </div>
-
-  <h2>隱私與流量分析</h2>
-  <section>
-    本站使用 <strong>Google Analytics 4</strong> 了解頁面使用情形（造訪了哪些頁面、停留多久），
-    用以判斷本站的內容與功能是否值得繼續投入——這項統計適用於<strong>所有訪客</strong>，
-    無論是否登入。
-  </section>
-  <section>
-    此工具會在您的瀏覽器<strong>設置 Cookie</strong>，並將您的 <strong>IP 位址、裝置與瀏覽器資訊傳送至 Google</strong> 處理。
-    若本站日後開放需登入的功能，此流量資料<strong>不會與經雜湊處理的帳號識別碼串接</strong>，
-    我們無法藉此回推個別使用者的身分。
-  </section>
-  <section>
-    您可透過瀏覽器設定封鎖 Cookie，或安裝 Google 官方的
-    <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Analytics 停用附加元件</a>退出。
-  </section>
-
-  <h2>版權反映</h2>
-  <section>
-    若您是內容所屬節目、主持人或版權方，對本站的引用方式有疑慮或希望下架特定集數，
-    請透過下方管道與我們聯繫，<strong>我們將於收到通知後盡快移除相關內容</strong>。
-  </section>
-  <div class="contact-box">
-    版權反映信箱：<a href="mailto:jasongogo123@gmail.com">jasongogo123@gmail.com</a>
-    <div style="font-size:0.75rem;color:#64748b;margin-top:6px;">
-      （請註明欲下架的集數與原因，我們會盡快處理）
+<div class="blocks">
+  <section class="block">
+    <div><p class="block-no">01</p><h2>這不是官方服務</h2></div>
+    <div class="block-body">
+      <p>本站與任何節目、主持人或製作單位<strong>皆無隸屬或合作關係</strong>，是第三方非官方專案。站上不使用任何原節目的 Logo 或官方視覺識別。</p>
     </div>
-  </div>
+  </section>
+
+  <section class="block">
+    <div><p class="block-no">02</p><h2>內容如何產生</h2></div>
+    <div class="block-body">
+      <p>每張導讀卡的內容皆由程式自動抓取節目逐字稿，並透過 AI 模型整理、摘要與延伸解讀生成，不是由本站人工撰寫，也不代表主持人本人的完整立場或原話。</p>
+      <div class="warn-box">
+        ⚠ 本站內容<strong>非投資建議</strong>。AI 生成內容可能有誤，請自行查證並判斷，投資有風險，盈虧請自行負責。
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div><p class="block-no">03</p><h2>隱私與流量分析</h2></div>
+    <div class="block-body">
+      <p>本站使用 <strong>Google Analytics 4</strong> 了解頁面使用情形（造訪了哪些頁面、停留多久），用以判斷本站的內容與功能是否值得繼續投入——這項統計適用於<strong>所有訪客</strong>，無論是否登入。</p>
+      <p>此工具會在您的瀏覽器<strong>設置 Cookie</strong>，並將您的 <strong>IP 位址、裝置與瀏覽器資訊傳送至 Google</strong> 處理。若本站日後開放需登入的功能，此流量資料<strong>不會與經雜湊處理的帳號識別碼串接</strong>，我們無法藉此回推個別使用者的身分。</p>
+      <p>您可透過瀏覽器設定封鎖 Cookie，或安裝 Google 官方的 <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Analytics 停用附加元件</a>退出。</p>
+    </div>
+  </section>
+
+  <section class="block" id="copyright">
+    <div><p class="block-no">04</p><h2>版權反映</h2></div>
+    <div class="block-body">
+      <p>若您是內容所屬節目、主持人或版權方，對本站的引用方式有疑慮或希望下架特定集數，請透過下方管道與我們聯繫，<strong>我們將於收到通知後盡快移除相關內容</strong>。</p>
+      <div class="contact-box">
+        <div class="label">版權反映信箱</div>
+        <a href="mailto:jasongogo123@gmail.com">jasongogo123@gmail.com</a>
+        <div class="note">（請註明欲下架的集數與原因，我們會盡快處理）</div>
+      </div>
+    </div>
+  </section>
+</div>
 </main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>Podcast 財經導讀站・第三方非官方專案・AI 生成內容，不構成投資建議</span>
+    <a href="./index.html">回首頁</a>
+  </div>
+</footer>
 
 </body>
 </html>

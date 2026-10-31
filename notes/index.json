@@ -1,6 +1,216 @@
 {
-  "total": 72,
+  "total": 79,
   "items": [
+    {
+      "ep_id": "mk/gooaye-ep0710",
+      "title": "EP710 | 🍒",
+      "date": "2026-10-31",
+      "podcaster": "mk",
+      "tw_tickers": [
+        "00631R"
+      ],
+      "us_tickers": [
+        "NVDA",
+        "AMD",
+        "MSFT",
+        "META",
+        "AAPL",
+        "AMZN",
+        "ARM",
+        "BRK.B"
+      ],
+      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/0cee70ae-6178-47d5-8ef1-12225a833dc0"
+    },
+    {
+      "ep_id": "statementdog/statementdog-2026-10-30-onkI4OrDTGQ",
+      "title": "財報狗｜573.【財經時事放大鏡】Anthropic & CSP 牽動 AIDC 供需",
+      "date": "2026-10-30",
+      "podcaster": "statementdog",
+      "tw_tickers": [
+        "2330"
+      ],
+      "us_tickers": [
+        "MSFT",
+        "AMZN"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=onkI4OrDTGQ"
+    },
+    {
+      "ep_id": "yutinghao/yutinghao-2026-10-30-uo6c3YNtEY8",
+      "title": "游庭皓｜2026/10/30(五)Alphabet狂瀉12% Marvell暴跌逾13% 英特爾暴跌20% 美股到底 跌完了沒有?【早晨財經速解讀】",
+      "date": "2026-10-30",
+      "podcaster": "yutinghao",
+      "tw_tickers": [
+        "2330",
+        "0056"
+      ],
+      "us_tickers": [
+        "NVDA",
+        "MSFT",
+        "GOOGL",
+        "GOOGL",
+        "AMZN",
+        "INTC",
+        "SPX",
+        "SPX",
+        "SOX",
+        "IXIC",
+        "RUT",
+        "QQQ",
+        "SPY",
+        "SOXX"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=uo6c3YNtEY8"
+    },
+    {
+      "ep_id": "yutinghao/yutinghao-2026-10-29-jP2PllUUXrI",
+      "title": "游庭皓｜2026/10/29(四)微軟噴谷歌崩 巨頭撐得住?聯準會攤牌 升息還沒完?【早晨財經速解讀】",
+      "date": "2026-10-29",
+      "podcaster": "yutinghao",
+      "tw_tickers": [],
+      "us_tickers": [
+        "NVDA",
+        "TSLA",
+        "MSFT",
+        "META",
+        "GOOGL",
+        "GOOGL",
+        "AAPL",
+        "ORCL",
+        "KO",
+        "PG",
+        "SPX",
+        "SOX",
+        "IXIC",
+        "DJI"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=jP2PllUUXrI"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-10-28-RhAETqkC2mw",
+      "title": "財經M平方｜Anthropic 再戰史上最大 IPO！3 個重點是否將成隱憂",
+      "date": "2026-10-28",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/RhAETqkC2-w"
+    },
+    {
+      "ep_id": "mk/gooaye-ep0709",
+      "title": "EP709 | ⭐",
+      "date": "2026-10-28",
+      "podcaster": "mk",
+      "tw_tickers": [],
+      "us_tickers": [
+        "NVDA",
+        "AMZN"
+      ],
+      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/499a0c9f-1a36-4d5b-b9ca-ee2b2510e0bd"
+    },
+    {
+      "ep_id": "statementdog/statementdog-2026-10-28-TrMCIAH85R8",
+      "title": "財報狗｜572.【達人聊產業】半導體先進製程跟 BBU 都指定的關鍵材料商 ft. 耐特陳勳森董事長 & 陳宇涵總經理",
+      "date": "2026-10-28",
+      "podcaster": "statementdog",
+      "tw_tickers": [
+        "2330"
+      ],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/watch?v=TrMCIAH85R8"
+    },
+    {
+      "ep_id": "yutinghao/yutinghao-2026-10-28-WScGZDz5Kno",
+      "title": "游庭皓｜2026/10/28(三)川普選情告急!美股將迎政治變局?Anthropic IPO行情 美股買點到了?【早晨財經速解讀】",
+      "date": "2026-10-28",
+      "podcaster": "yutinghao",
+      "tw_tickers": [
+        "2330"
+      ],
+      "us_tickers": [
+        "NVDA",
+        "MSFT",
+        "AMZN",
+        "AMZN",
+        "ORCL",
+        "SPX",
+        "SOX",
+        "IXIC",
+        "DJI"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=WScGZDz5Kno"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-10-27-yhPYltdHmZo",
+      "title": "財經M平方｜破解 CoreWeave 違約率風險，親爸輝達真的毋需出手相救？👇🏻觀看完整解析",
+      "date": "2026-10-27",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [
+        "NVDA"
+      ],
+      "source_url": "https://www.youtube.com/shorts/yhPYltdH-Zo"
+    },
+    {
+      "ep_id": "yutinghao/yutinghao-2026-10-27-fXo4kKJjQ5E",
+      "title": "游庭皓｜2026/10/27(二)美股止跌了?加碼or觀望 Anthropic上市倒數 期中選舉恐衝擊AI?【早晨財經速解讀】",
+      "date": "2026-10-27",
+      "podcaster": "yutinghao",
+      "tw_tickers": [],
+      "us_tickers": [
+        "NVDA",
+        "TSLA",
+        "MSFT",
+        "META",
+        "AMZN",
+        "AVGO",
+        "AVGO",
+        "QCOM",
+        "ORCL",
+        "SPX",
+        "SOX",
+        "IXIC",
+        "DJI"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=fXo4kKJjQ5E"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-10-25-FOr0Sl5fRxA",
+      "title": "財經M平方｜Coreweave 會成為第一張 AI 暴雷的骨牌嗎？｜After Meeting EP. 219",
+      "date": "2026-10-25",
+      "podcaster": "macromicro",
+      "tw_tickers": [
+        "2330"
+      ],
+      "us_tickers": [
+        "NVDA",
+        "NVDA",
+        "NVDA",
+        "AMD",
+        "TSLA",
+        "META",
+        "GOOGL",
+        "AMZN",
+        "ORCL",
+        "NFLX",
+        "SPX",
+        "SPX",
+        "SOX",
+        "IXIC"
+      ],
+      "source_url": "https://www.youtube.com/watch?v=FOr0Sl5fRxA"
+    },
+    {
+      "ep_id": "mk/gooaye-ep0708",
+      "title": "EP708 | 🦷",
+      "date": "2026-10-24",
+      "podcaster": "mk",
+      "tw_tickers": [],
+      "us_tickers": [
+        "NVDA",
+        "SBUX"
+      ],
+      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/b86cb101-d4a0-49da-af9c-b1e460f5c89a"
+    },
     {
       "ep_id": "statementdog/statementdog-2026-10-23-Oy2kTU0uUxg",
       "title": "財報狗｜571.【財經時事放大鏡】TPCA x SpaceX",
@@ -254,6 +464,15 @@
       "source_url": "https://www.youtube.com/shorts/LB3QSpG_Euw"
     },
     {
+      "ep_id": "macromicro/macromicro-2026-10-12-bLUSxdZpel0",
+      "title": "財經M平方｜再撐一下！過了 2026 到這段時間，通膨將關關難過、關關過？",
+      "date": "2026-10-12",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/bLUSxdZpel0"
+    },
+    {
       "ep_id": "macromicro/macromicro-2026-10-11-IFEqQhrzf4k",
       "title": "財經M平方｜美債殖利率續高，股市閃身步續強？｜After Meeting EP. 217",
       "date": "2026-10-11",
@@ -291,6 +510,15 @@
       "source_url": "https://www.youtube.com/watch?v=zoJvYHhk3oU"
     },
     {
+      "ep_id": "macromicro/macromicro-2026-10-07-EQvfrwbwxV4",
+      "title": "財經M平方｜AI 軍備競賽轉型！重點關注這兩個數據是否出現「死亡交叉」",
+      "date": "2026-10-07",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/EQvfrwbwxV4"
+    },
+    {
       "ep_id": "mk/gooaye-ep0703",
       "title": "EP703 | 🏈",
       "date": "2026-10-07",
@@ -306,6 +534,24 @@
         "META"
       ],
       "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/0b071f57-45ba-47d3-9f15-2129a0c645a8"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-10-06-GcH9WKpUqOg",
+      "title": "財經M平方｜AI 供應鏈決勝「毛利率」？透過數據看出這個領域存在隱含風險！",
+      "date": "2026-10-06",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/GcH9WKpUqOg"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-10-05-7QnJqdPcA2Y",
+      "title": "財經M平方｜研究員眼睛一看發現案情不單純！這數據將是未來必看庫存週期指標",
+      "date": "2026-10-05",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/7QnJqdPcA2Y"
     },
     {
       "ep_id": "macromicro/macromicro-2026-10-04-vgO0OQx07aQ",
@@ -358,6 +604,19 @@
       "source_url": "https://www.youtube.com/watch?v=K6B-imCYvO0"
     },
     {
+      "ep_id": "macromicro/macromicro-2026-09-30-Uf5sqNm1mCA",
+      "title": "財經M平方｜正二、正三比較賺？看懂這公式掌握槓桿型 ETF 值不值得你長抱",
+      "date": "2026-09-30",
+      "podcaster": "macromicro",
+      "tw_tickers": [
+        "00631R"
+      ],
+      "us_tickers": [
+        "IXIC"
+      ],
+      "source_url": "https://www.youtube.com/shorts/Uf5sqNm1-CA"
+    },
+    {
       "ep_id": "mk/gooaye-ep0701",
       "title": "EP701 | 🐡",
       "date": "2026-09-30",
@@ -370,6 +629,26 @@
         "GOOGL"
       ],
       "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/2ab843a8-d7f8-4655-a73d-609b81c59baa"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-09-29-P5QDd7PduRo",
+      "title": "財經M平方｜聯準會重啟升息循環衝擊 ETF 市場？利用 #獨家工具 幫你效率回測、配置行情對談！",
+      "date": "2026-09-29",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/P5QDd7Pd_Ro"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-09-29-rede21BGW14",
+      "title": "財經M平方｜債券殖利率越高越好？忽略「這關鍵」你賺了 ETF 配息賠了價差",
+      "date": "2026-09-29",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [
+        "TLT"
+      ],
+      "source_url": "https://www.youtube.com/shorts/rede21BGW14"
     },
     {
       "ep_id": "macromicro/macromicro-2026-09-27-Yxnr1RBA4w0",
@@ -420,6 +699,15 @@
       "source_url": "https://www.youtube.com/watch?v=YHIPJIxrLXw"
     },
     {
+      "ep_id": "macromicro/macromicro-2026-09-23-tPjkrSdAZOw",
+      "title": "財經M平方｜升息循環將被開啟？40 秒秒懂跨過今年通膨就 safe",
+      "date": "2026-09-23",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/tPjkrSdAZOw"
+    },
+    {
       "ep_id": "mk/gooaye-ep0699",
       "title": "EP699 | 🪻",
       "date": "2026-09-23",
@@ -432,6 +720,15 @@
         "MCD"
       ],
       "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/07a93403-e26a-4a8b-a53a-497aa4e9ca20"
+    },
+    {
+      "ep_id": "macromicro/macromicro-2026-09-21-jlnOwojk6GQ",
+      "title": "財經M平方｜聯準會動向捉摸不定？3+2 關鍵工具跟著研究員看懂脈絡！",
+      "date": "2026-09-21",
+      "podcaster": "macromicro",
+      "tw_tickers": [],
+      "us_tickers": [],
+      "source_url": "https://www.youtube.com/shorts/jlnOwojk6GQ"
     },
     {
       "ep_id": "statementdog/statementdog-2026-09-21-CxrpiPcHGi8",
@@ -963,227 +1260,6 @@
         "DJI"
       ],
       "source_url": "https://www.youtube.com/watch?v=XY31kO-V0Q4"
-    },
-    {
-      "ep_id": "statementdog/statementdog-2026-08-31-E5PZbRncVGY",
-      "title": "財報狗｜549.【台股美股提款機】玻璃基板產業展望與競爭格局",
-      "date": "2026-08-31",
-      "podcaster": "statementdog",
-      "tw_tickers": [],
-      "us_tickers": [],
-      "source_url": "https://www.youtube.com/watch?v=E5PZbRncVGY"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-31-BxtHhc6P1n0",
-      "title": "游庭皓｜2026/8/31(一)華許放鷹 升息躲得掉?高利率越久 美債美股 誰先撐不住？【早晨財經速解讀】",
-      "date": "2026-08-31",
-      "podcaster": "yutinghao",
-      "tw_tickers": [],
-      "us_tickers": [
-        "QCOM",
-        "BRK.B",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=BxtHhc6P1n0"
-    },
-    {
-      "ep_id": "macromicro/macromicro-2026-08-30-REe9DXP1R9o",
-      "title": "財經M平方｜美債鬼門開，你信貝森特還是黃仁勳？｜After Meeting EP. 212",
-      "date": "2026-08-30",
-      "podcaster": "macromicro",
-      "tw_tickers": [
-        "2330",
-        "2330"
-      ],
-      "us_tickers": [
-        "NVDA",
-        "NVDA",
-        "GOOGL",
-        "GOOGL",
-        "AMZN",
-        "SOX",
-        "IXIC"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=REe9DXP1R9o"
-    },
-    {
-      "ep_id": "mk/gooaye-ep0692",
-      "title": "EP692 | 🍺",
-      "date": "2026-08-29",
-      "podcaster": "mk",
-      "tw_tickers": [
-        "2330",
-        "0050"
-      ],
-      "us_tickers": [],
-      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/dcff9355-4c66-4b25-8afc-bf70ffd57d0a"
-    },
-    {
-      "ep_id": "statementdog/statementdog-2026-08-28-S8LEfBq6s2Q",
-      "title": "財報狗｜548.【財經時事放大鏡】NVIDIA x Hotchips x FOPLP",
-      "date": "2026-08-28",
-      "podcaster": "statementdog",
-      "tw_tickers": [
-        "2330"
-      ],
-      "us_tickers": [
-        "AVGO",
-        "AVGO",
-        "MU"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=S8LEfBq6s2Q"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-28-rTnPsmugAhA",
-      "title": "游庭皓｜2026/8/28(五)輝達救美股 華許救美債?台灣景氣連八紅 台灣人終於有感?【早晨財經速解讀】",
-      "date": "2026-08-28",
-      "podcaster": "yutinghao",
-      "tw_tickers": [
-        "2330",
-        "0056"
-      ],
-      "us_tickers": [
-        "NVDA",
-        "NVDA",
-        "MSFT",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=rTnPsm_gAhA"
-    },
-    {
-      "ep_id": "macromicro/macromicro-2026-08-27-R5zxQcqmoS4",
-      "title": "財經M平方｜美債殖利率警世鐘再次浮現？！回顧去年 Rachel 怎麼說",
-      "date": "2026-08-27",
-      "podcaster": "macromicro",
-      "tw_tickers": [],
-      "us_tickers": [],
-      "source_url": "https://www.youtube.com/shorts/R5zxQcq-oS4"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-27-lDeHFopOfIs",
-      "title": "游庭皓｜2026/8/27(四)輝達財報再超標!追高意願低?美股為何原地踏步?【早晨財經速解讀】",
-      "date": "2026-08-27",
-      "podcaster": "yutinghao",
-      "tw_tickers": [
-        "2330"
-      ],
-      "us_tickers": [
-        "NVDA",
-        "NVDA",
-        "AMD",
-        "MSFT",
-        "GOOGL",
-        "AMZN",
-        "AMZN",
-        "AVGO",
-        "AVGO",
-        "INTC",
-        "MU",
-        "ORCL",
-        "MCD",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=lDeHFopOfIs"
-    },
-    {
-      "ep_id": "mk/gooaye-ep0691",
-      "title": "EP691 | 🎂",
-      "date": "2026-08-26",
-      "podcaster": "mk",
-      "tw_tickers": [],
-      "us_tickers": [
-        "META"
-      ],
-      "source_url": "https://player.soundon.fm/p/954689a5-3096-43a4-a80b-7810b219cef3/episodes/00bd1c70-5749-475b-af00-28c1b8751e41"
-    },
-    {
-      "ep_id": "statementdog/statementdog-2026-08-26-tCULV6PmDIg",
-      "title": "財報狗｜547.【達人聊產業】BMW 的全新世代：Neue Klasse 如何重寫下一個時代的駕馭樂趣 ft. BMW 產品負責人 Alexander 魏聖德",
-      "date": "2026-08-26",
-      "podcaster": "statementdog",
-      "tw_tickers": [],
-      "us_tickers": [],
-      "source_url": "https://www.youtube.com/watch?v=tCULV6PmDIg"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-26-KUZC2NyCCCY",
-      "title": "游庭皓｜2026/8/26(三)美債回購能 救川普選情?日本缺工 歐洲缺膽 誰能突圍?【早晨財經速解讀】",
-      "date": "2026-08-26",
-      "podcaster": "yutinghao",
-      "tw_tickers": [],
-      "us_tickers": [
-        "NVDA",
-        "MSFT",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=KUZC2NyCCCY"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-25-tLvKGHyxhd8",
-      "title": "游庭皓｜2026/8/25(二)輝達連七黑 領頭羊動搖 ?經濟諾曼第行動 通膨撐得住?【早晨財經速解讀】",
-      "date": "2026-08-25",
-      "podcaster": "yutinghao",
-      "tw_tickers": [
-        "2330",
-        "2454",
-        "2317",
-        "2308",
-        "2356"
-      ],
-      "us_tickers": [
-        "NVDA",
-        "NVDA",
-        "AMZN",
-        "INTC",
-        "MU",
-        "SPX",
-        "SOX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=tLvKGHyxhd8"
-    },
-    {
-      "ep_id": "statementdog/statementdog-2026-08-24-nuHb2D3cxrI",
-      "title": "財報狗｜546.【達人聊投資】13F 報告投資機會: AI 和非 AI",
-      "date": "2026-08-24",
-      "podcaster": "statementdog",
-      "tw_tickers": [
-        "2330"
-      ],
-      "us_tickers": [
-        "TSLA",
-        "META"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=n_Hb2D3cxrI"
-    },
-    {
-      "ep_id": "yutinghao/yutinghao-2026-08-24-dFYqrIQIMvw",
-      "title": "游庭皓｜2026/8/24(一)美債救不動 黃金 比特幣先起飛?關稅戰再起 最後誰買單？【早晨財經速解讀】",
-      "date": "2026-08-24",
-      "podcaster": "yutinghao",
-      "tw_tickers": [],
-      "us_tickers": [
-        "NVDA",
-        "MSFT",
-        "QCOM",
-        "SPX",
-        "IXIC",
-        "DJI"
-      ],
-      "source_url": "https://www.youtube.com/watch?v=dFYqrIQIMvw"
     }
   ]
 }

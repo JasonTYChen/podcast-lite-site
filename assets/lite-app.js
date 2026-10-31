@@ -1432,6 +1432,12 @@ function _trapFocus(e, container) {
 /** Esc 依疊層由上而下關閉；閱讀器開著時 ←／→ 切換集數。輸入框內不攔截。 */
 function _handleGlobalKeydown(e) {
   const t = e.target;
+  const login = document.getElementById('copilot-login-prompt');
+  if (login && !login.hidden) {
+    // 不攔 Tab：官方登入鈕是 iframe，_trapFocus 找不到它，攔了鍵盤就到不了。
+    if (e.key === 'Escape') _closeCopilotLoginPrompt();
+    return;
+  }
   if (e.key === 'Tab') {
     const dd = document.getElementById('dd-overlay');
     const reader = document.getElementById('reader');
@@ -1567,6 +1573,11 @@ function _handleDelegatedClick(event) {
   // 之前檢查——選單外部的點擊通常沒有 data-action，若放在早退之後
   // 就永遠不會被呼叫到。
   _maybeCollapsePersonaMenu(event);
+  // SPEC-030 §7.10：點登入提示外的遮罩（提示容器本身）即關閉。
+  if (event.target && event.target.id === 'copilot-login-prompt') {
+    _closeCopilotLoginPrompt();
+    return;
+  }
 
   const el = event.target.closest('[data-action]');
   if (!el) return;
@@ -1584,12 +1595,16 @@ function _handleDelegatedClick(event) {
     // 事件）沒有任何東西在等它的完成時間點。函式自身以 try/finally
     // 保證不會產生未處理的 rejection（見其內部說明）。
     _startCopilotGenerate();
+    // SPEC-030 §7.3：產出進行中，產出鈕與選項 disabled（finally 恢復）。
+    _applyCopilotGenerateButtonState();
+  } else if (action === 'regen-copilot-overview') {
+    // SPEC-030 §7.4：速覽卡頁尾「換個設定重新產出」。
+    _regenCopilotOverview();
   } else if (action === 'bring-into-discussion') {
     // T-2714（spec-027 §2.3／§7.3）：點擊「💬 帶入討論」。
     _bringIntoDiscussion(el.dataset.epId, el.dataset.blockId, el.dataset.title);
-  } else if (action === 'toggle-overview-toolbar') {
-    // T-2813（spec-028 §7.4）：點擊「產業全景速覽」標頭，收折／展開。
-    _toggleCopilotOverviewToolbar();
+  } else if (action === 'close-copilot-login') {
+    _closeCopilotLoginPrompt();
   } else if (action === 'toggle-overview-card') {
     // T-2814（spec-028 §7.3）：點擊速覽文件卡標頭，收折／展開。
     _toggleCopilotOverviewCard(el.dataset.bodyId, el.dataset.arrowId);
@@ -1808,6 +1823,37 @@ function _applyCopilotButtonVisibility(config) {
  */
 let _copilotPanelOpen = false;
 
+/**
+ * 工作台的線條 icon（SPEC-030 §7.7，SDD §9 擴充預留點）：新增 icon 只要在
+ * 下表加一個 key。內容是固定字串，不含任何外部資料，可直接併入 HTML。
+ */
+const COPILOT_ICON_PATHS = {
+  download: '<path d="M12 4v11m0 0l-4.5-4.5M12 15l4.5-4.5M5 19.5h14"/>',
+  layers: '<path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z"/><path d="M3.5 12.5l8.5 4.5 8.5-4.5"/>',
+  arrow: '<path d="M5 12h14m-5.5-5.5L19 12l-5.5 5.5"/>',
+  down: '<path d="M12 5v14m0 0l-5-5m5 5l5-5"/>',
+  chevron: '<path d="M6 9l6 6 6-6"/>',
+  up: '<path d="M12 19V5m0 0l-6 6m6-6l6 6"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V4.5H4.5V15H9"/>',
+  user: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5a7 7 0 0114 0"/>',
+  chart: '<path d="M4 19.5h16"/><path d="M6 15l4-4.5 3 3 5-6"/>',
+  link: '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/>',
+  shield: '<path d="M12 3.5l7 2.8v5.2c0 4.6-3 7.6-7 9.5-4-1.9-7-4.9-7-9.5V6.3z"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+};
+
+/**
+ * @param {string} name `COPILOT_ICON_PATHS` 的 key
+ * @returns {string} 內嵌 SVG（`aria-hidden="true"`、`stroke="currentColor"`）；
+ *   名稱不存在時回傳空字串
+ */
+function _copilotIcon(name) {
+  if (!Object.prototype.hasOwnProperty.call(COPILOT_ICON_PATHS, name)) return '';
+  return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"'
+    + ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
+    + COPILOT_ICON_PATHS[name] + '</svg>';
+}
+
 function _openCopilotPanel(epId, blockId, title) {
   try {
     const panel = document.getElementById('copilot-panel');
@@ -1916,38 +1962,36 @@ let _copilotDiscussionContext = null;
  * 不提供退回無錨定空白狀態的手動出口。
  */
 function _ensureCopilotContextIndicator() {
+  // SPEC-030 §7.2：指示條併入標題列的 kicker（靜態節點，見 lite/index.html），
+  // `#copilot-panel-body` 內不再插入任何「正在討論」字樣。
   try {
-    const body = document.getElementById('copilot-panel-body');
-    if (!body) return null;
-    let indicator = document.getElementById('copilot-context-indicator');
-    if (indicator) return indicator;
-    body.insertAdjacentHTML('afterbegin', [
-      '<div id="copilot-context-indicator" hidden style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#EEF2FF;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:12px;">',
-      '<span id="copilot-context-indicator-text" style="color:var(--accent);font-weight:600;"></span>',
-      '</div>',
-    ].join(''));
-    return document.getElementById('copilot-context-indicator');
+    return document.getElementById('copilot-panel-kicker');
   } catch (e) {
     return null;
   }
 }
 
 /**
- * 依 `_copilotDiscussionContext` 顯示或隱藏指示條、更新標題文字。
- * **未錨定時高度 0（隱藏）**（spec §7.3）：用 `hidden` 屬性達成，比照
- * 本檔其餘條件式顯示節點的既有慣例。
+ * 依 `_copilotDiscussionContext` 更新標題列的 kicker 與標題（SPEC-030 §7.2）。
+ * 產業主題（`industry-N`）與 `_applyOverviewToolbarForTopic()` 用同一個前綴
+ * 判定；沒有主題（逾時失效後）時顯示引導文字。
  */
 function _updateCopilotContextIndicator() {
   try {
-    const indicator = _ensureCopilotContextIndicator();
-    if (!indicator) return;
-    const textEl = document.getElementById('copilot-context-indicator-text');
-    if (_copilotDiscussionContext) {
-      indicator.hidden = false;
-      if (textEl) textEl.textContent = '📑 正在討論：' + (_copilotDiscussionContext.title || '');
-    } else {
-      indicator.hidden = true;
-      if (textEl) textEl.textContent = '';
+    const kicker = _ensureCopilotContextIndicator();
+    const titleEl = document.getElementById('copilot-panel-title');
+    const ctx = _copilotDiscussionContext;
+    if (kicker) {
+      if (!ctx) kicker.textContent = '尚未選擇主題';
+      else if (String(ctx.blockId || '').indexOf('industry-') === 0) kicker.textContent = '正在討論・產業動態';
+      else kicker.textContent = '正在討論・個股觀點';
+    }
+    if (titleEl) {
+      titleEl.textContent = ctx ? (ctx.title || '') : '回到列表，點「帶入討論」開始';
+      if (titleEl.classList) {
+        if (ctx) titleEl.classList.remove('is-empty');
+        else titleEl.classList.add('is-empty');
+      }
     }
   } catch (e) {
     // 例外不得影響既有渲染（比照本檔其餘 UI 函式）。
@@ -1971,23 +2015,41 @@ function _applyDiscussButtonState() {
   }
 }
 
-/**
- * 嘗試喚起 Google 登入（One Tap）。**這是本專案第一次需要「偵測未登入
- * 時主動觸發登入」**（W-26 記錄過的既有空隙：舊版「一鍵生成」入口從未
- * 實作這個動線，訪客點擊後畫面沒有反應）——`google.accounts.id.prompt()`
- * 是 GIS 官方提供、`initialize()` 之後即可呼叫的程式化觸發方式，不需要
- * 新建任何 UI。**防禦性**：GIS 尚未載入或初始化失敗時安靜放棄，不拋出
- * 例外，也不假裝登入成功。
- */
-function _triggerGoogleLoginPrompt() {
+// SPEC-030 §7.10：入口登入提示。待辦主題只存在記憶體；取消、Esc、遮罩都清除。
+let _copilotPendingDiscussion = null;
+
+function _openCopilotLoginPrompt(epId, blockId, title) {
+  _copilotPendingDiscussion = { epId: epId || '', blockId: blockId || '', title: title || '' };
+  const box = document.getElementById('copilot-login-prompt');
+  const gis = document.getElementById('copilot-login-gis');
+  const na = document.getElementById('copilot-login-unavailable');
+  if (!box || !gis || !na) return;
+  const id = window.google && window.google.accounts && window.google.accounts.id;
+  let ok = !!(id && _shouldEnableGoogleLogin(_copilotConfig));
   try {
-    if (typeof window !== 'undefined' && window.google && window.google.accounts && window.google.accounts.id
-      && typeof window.google.accounts.id.prompt === 'function') {
-      window.google.accounts.id.prompt();
-    }
+    if (ok) id.renderButton(gis, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with' });
   } catch (e) {
-    // 觸發失敗不得往上拋，比照本檔其餘 UI 操作函式的既有慣例。
+    ok = false;
   }
+  gis.hidden = !ok;
+  na.hidden = ok;
+  box.hidden = false;
+  const cancel = box.querySelector('[data-action="close-copilot-login"]');
+  if (cancel && typeof cancel.focus === 'function') cancel.focus();
+}
+
+function _closeCopilotLoginPrompt() {
+  _copilotPendingDiscussion = null;
+  const box = document.getElementById('copilot-login-prompt');
+  if (box) box.hidden = true;
+}
+
+/** 登入驗證成功後呼叫：有待辦主題才續行，先清除再開啟，保證恰 1 次。 */
+function _resumePendingDiscussion() {
+  const p = _copilotPendingDiscussion;
+  if (!p) return;
+  _closeCopilotLoginPrompt();
+  _bringIntoDiscussion(p.epId, p.blockId, p.title);
 }
 
 /**
@@ -2007,7 +2069,7 @@ function _triggerGoogleLoginPrompt() {
 function _bringIntoDiscussion(epId, blockId, title) {
   try {
     if (typeof _lastIdToken !== 'string' || _lastIdToken.length === 0) {
-      _triggerGoogleLoginPrompt();
+      _openCopilotLoginPrompt(epId, blockId, title);
       return;
     }
     if (_copilotQuotaExhausted) return;
@@ -2034,9 +2096,6 @@ function _bringIntoDiscussion(epId, blockId, title) {
     // 刻意不含任何清空 `#copilot-chat-thread` 的操作。**
     _copilotChatMessages = [];
     _updateCopilotContextIndicator();
-    // T-2813（spec-028 §7.4）：依 blockId 前綴決定「產業全景速覽」
-    // 工具條的建立／移除（PRD §4.6 不對稱工具列）。
-    _applyOverviewToolbarForTopic(blockId);
 
     if (!isSameTopic) {
       // 換至不同主題（或首次呼叫）：僅在「此前已有主題」時插入分隔線
@@ -2051,6 +2110,8 @@ function _bringIntoDiscussion(epId, blockId, title) {
       // 在匯出檔中被拆成多段。
       _copilotExportLog.push({ title: title || '', entries: [], overview: null });
     }
+    // 開始卡（SPEC-030 §7.3）在目前主題段落末端，須排在分隔線之後。
+    _applyOverviewToolbarForTopic(blockId);
 
     const panel = document.getElementById('copilot-panel');
     if (panel) {
@@ -2086,6 +2147,8 @@ function _bringIntoDiscussion(epId, blockId, title) {
     // T-2716：確保 Composer 存在，並在「帶入討論」後取得焦點
     // （spec §7.3：點擊後輸入框取得 focus）。
     _ensureCopilotComposer();
+    // SPEC-030 §7.11：換主題時依新主題恢復或停用輸入與產出。
+    _applyCopilotTurnLimitState();
     const composerInput = document.getElementById('copilot-composer-input');
     if (composerInput && typeof composerInput.focus === 'function') composerInput.focus();
     // T-2720：確保匯出鍵存在。**新主題段落的 push 已移至上方**
@@ -2108,106 +2171,248 @@ function _bringIntoDiscussion(epId, blockId, title) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// 「產業全景速覽」收折工具條（T-2813，spec-028 §7.4）
+// 開始卡（SPEC-030 §7.3）：位於 #copilot-chat-thread 內目前主題段落末端，
+// 產業主題恰 1 個、個股主題改顯示提示。無依視窗寬度的分支。
 // ═══════════════════════════════════════════════════════════════════════
-//
-// 把原 T-2504（SPEC-025）常駐的個人化選項（週期／屬性 chip）降級為
-// 工作台內的小工具：僅產業主題顯示，預設收折（Q28-C：桌機與手機一致，
-// 本節不含任何依視窗寬度分支）。【2026-09-16 更新，T-2814】「立即產出」
-// 鈕已接上（`id="copilot-generate-btn"`，沿用既有 `start-copilot-
-// generate` 事件委派與 `_applyCopilotGenerateButtonState()` 的額度
-// 閘門機制，皆不必新增）；串流與文件卡邏輯見下方「速覽文件卡」小節。
+
+/** 選項 enum → 顯示文字（送出的 body 只含 enum）。 */
+const COPILOT_OPTION_LABELS = {
+  horizon: { swing: '波段', scalp: '超短線', longterm: '長線' },
+  style: { steady: '穩健', growth: '爆發', contrarian: '逆勢' },
+};
+
+const COPILOT_START_QUOTA_NOTE_INDUSTRY = '產出速覽或送出第一個問題，會使用 1 次免費體驗；之後這個主題的追問不另計。';
+const COPILOT_START_QUOTA_NOTE_STOCK = '送出第一個問題，會使用 1 次免費體驗；之後這個主題的追問不另計。';
+
+/** 送出過問題時的 context 物件；帶入討論會建立新物件，換主題自然失效。 */
+let _copilotAskedContext = null;
+
+function _copilotTopicKey(epId, blockId) {
+  return (epId || '') + '#' + (blockId || '');
+}
+
+// SPEC-030 §7.11：收到 429 session_turn_limit 的主題（鍵 epId#blockId），只存在記憶體，不持久化。
+const _copilotTurnLimitedTopics = new Set();
+const COPILOT_TURN_LIMIT_PLACEHOLDER = '這個主題的討論額度已用完';
+
+function _markCopilotTopicTurnLimited() {
+  const ctx = _copilotDiscussionContext;
+  if (ctx) _copilotTurnLimitedTopics.add(_copilotTopicKey(ctx.epId, ctx.blockId));
+}
+
+function _isCopilotTopicTurnLimited() {
+  const ctx = _copilotDiscussionContext;
+  return !!ctx && _copilotTurnLimitedTopics.has(_copilotTopicKey(ctx.epId, ctx.blockId));
+}
+
+/** 依目前主題是否輪次已用完，停用或恢復輸入框、送出鈕、產出鈕與 6 個選項。 */
+function _applyCopilotTurnLimitState() {
+  try {
+    const input = document.getElementById('copilot-composer-input');
+    if (input) input.disabled = _isCopilotTopicTurnLimited();
+    _syncCopilotPersonaUi();
+    _applyCopilotComposerSubmitState();
+    _applyCopilotGenerateButtonState();
+  } catch (e) {
+    // 例外不得往上拋。
+  }
+}
+
+function _copilotChatThread() {
+  const body = document.getElementById('copilot-panel-body');
+  if (!body) return null;
+  let thread = document.getElementById('copilot-chat-thread');
+  if (!thread) {
+    body.insertAdjacentHTML('beforeend', '<div id="copilot-chat-thread"></div>');
+    thread = document.getElementById('copilot-chat-thread');
+  }
+  return thread;
+}
+
+function _copilotOptionChipsHtml(group) {
+  const labels = COPILOT_OPTION_LABELS[group];
+  return Object.keys(labels).map((value) => {
+    const on = _copilotSelection[group] === value;
+    return '<button type="button" class="copilot-chip' + (on ? ' is-selected' : '') + '" data-action="select-copilot-option"'
+      + ' data-group="' + group + '" data-value="' + value + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + labels[value] + '</button>';
+  }).join('');
+}
+
+/** 「投資週期」「偏好屬性」兩組選項；開始卡與個股主題的 #copilot-stock-options 共用。 */
+function _copilotOptionGroupsHtml() {
+  return [
+    '<div class="copilot-option-group"><span class="copilot-option-label">投資週期</span>',
+    '<div class="copilot-option-chips" role="group" aria-label="投資週期">', _copilotOptionChipsHtml('horizon'), '</div></div>',
+    '<div class="copilot-option-group"><span class="copilot-option-label">偏好屬性</span>',
+    '<div class="copilot-option-chips" role="group" aria-label="偏好屬性">', _copilotOptionChipsHtml('style'), '</div></div>',
+  ].join('');
+}
 
 /**
- * 建立工具條的 DOM（若尚未建立），插入 `#copilot-quota-text` 之前——
- * 與舊版 `#copilot-options` 原本的靜態位置相同。只建立一次
- * （`getElementById` 已存在就直接回傳）。展開態內含既有的週期／屬性
- * chip，markup 與 `data-*` 屬性逐字沿用 SPEC-025 版本，`_selectCopilotOption()`／
- * `_syncCopilotOptionVisuals()` 皆用全域 `document.querySelectorAll`
- * 選取、不依賴容器路徑，行為不受插入方式改變影響。
+ * SPEC-031 §7.5-2：個股主題（target-N）在提示（有額度附註時在附註）之後放兩組選項，
+ * 不含速覽按鈕；其他主題移除。停用條件沿用 _applyCopilotGenerateButtonState()。
  */
+function _syncCopilotStockOptions(isStock) {
+  const wrap = document.getElementById('copilot-start-stock');
+  let el = document.getElementById('copilot-stock-options');
+  if (!isStock || !wrap) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    wrap.insertAdjacentHTML('beforeend', '<div id="copilot-stock-options">' + _copilotOptionGroupsHtml() + '</div>');
+    el = document.getElementById('copilot-stock-options');
+  }
+  const anchor = document.getElementById('copilot-start-quota-note') || document.getElementById('copilot-start-hint');
+  if (anchor && anchor.nextElementSibling !== el) anchor.after(el);
+  _applyCopilotGenerateButtonState();
+}
+
+/** 建立開始卡（只建立一次）。全文件只有這裡產生 #copilot-generate-btn。 */
 function _ensureCopilotOverviewToolbar() {
   try {
     let toolbar = document.getElementById('copilot-overview-toolbar');
     if (toolbar) return toolbar;
-    const quotaEl = document.getElementById('copilot-quota-text');
-    if (!quotaEl) return null;
-    quotaEl.insertAdjacentHTML('beforebegin', [
-      '<div class="copilot-overview-toolbar" id="copilot-overview-toolbar">',
-      '<div class="copilot-overview-toolbar-header" id="copilot-overview-toolbar-header" data-action="toggle-overview-toolbar">',
-      '<span>⚡ 產業全景速覽</span><span id="copilot-overview-toolbar-arrow">▸</span>',
+    const thread = _copilotChatThread();
+    if (!thread) return null;
+    thread.insertAdjacentHTML('beforeend', [
+      '<section class="copilot-start" id="copilot-overview-toolbar" aria-label="產業全景速覽">',
+      '<div class="copilot-start-card">',
+      '<h3 class="copilot-start-title">', _copilotIcon('layers'), '<span>產業全景速覽</span></h3>',
+      '<p class="copilot-start-desc">約 30 秒，整理這個主題的產業鏈、供需瓶頸與關鍵觀察指標。</p>',
+      _copilotOptionGroupsHtml(),
+      '<button type="button" class="copilot-primary-btn" id="copilot-generate-btn" data-action="start-copilot-generate"><span>產出速覽</span>',
+      _copilotIcon('arrow'), '</button>',
       '</div>',
-      '<div class="copilot-overview-toolbar-body" id="copilot-overview-toolbar-body" hidden>',
-      '<div class="copilot-options" id="copilot-options">',
-      '<div class="copilot-option-group">',
-      '<div class="copilot-option-label">投資週期</div>',
-      '<div class="copilot-option-chips">',
-      '<button type="button" class="copilot-chip is-selected" data-action="select-copilot-option" data-group="horizon" data-value="swing">波段</button>',
-      '<button type="button" class="copilot-chip" data-action="select-copilot-option" data-group="horizon" data-value="scalp">超短線</button>',
-      '<button type="button" class="copilot-chip" data-action="select-copilot-option" data-group="horizon" data-value="longterm">長線</button>',
-      '</div></div>',
-      '<div class="copilot-option-group">',
-      '<div class="copilot-option-label">偏好屬性</div>',
-      '<div class="copilot-option-chips">',
-      '<button type="button" class="copilot-chip is-selected" data-action="select-copilot-option" data-group="style" data-value="steady">穩健</button>',
-      '<button type="button" class="copilot-chip" data-action="select-copilot-option" data-group="style" data-value="growth">爆發</button>',
-      '<button type="button" class="copilot-chip" data-action="select-copilot-option" data-group="style" data-value="contrarian">逆勢</button>',
-      '</div></div>',
-      '</div>',
-      '<button type="button" class="dd-more-btn" id="copilot-generate-btn-toolbar" data-action="start-copilot-generate">🚀 立即產出</button>',
-      '</div>',
-      '</div>',
+      '</section>',
     ].join(''));
+    _applyCopilotGenerateButtonState();
     return document.getElementById('copilot-overview-toolbar');
   } catch (e) {
     return null;
   }
 }
 
-/**
- * 移除工具條（若存在）——切到個股主題時呼叫（spec §7.4 條款 1：
- * 「若前一主題已建立則自 DOM 移除」，非僅隱藏）。`Element.prototype.remove`
- * 為標準 DOM API；既有測試沙盒的 `fakeEl()` 未提供此方法，呼叫會拋出
- * 例外並被本函式的 try/catch 吞掉——與本檔其餘 UI 函式的既有容錯慣例
- * 一致，不影響其他斷言。
- */
-function _removeCopilotOverviewToolbar() {
+function _ensureCopilotStockHint() {
   try {
-    const toolbar = document.getElementById('copilot-overview-toolbar');
-    if (toolbar && typeof toolbar.remove === 'function') toolbar.remove();
+    const wrap = document.getElementById('copilot-start-stock');
+    if (wrap) return wrap;
+    const thread = _copilotChatThread();
+    if (!thread) return null;
+    thread.insertAdjacentHTML('beforeend',
+      '<div class="copilot-start-stock" id="copilot-start-stock">'
+      + '<p class="copilot-start-hint" id="copilot-start-hint">個股觀點沒有產業全景速覽，請直接在下方向專家提問。</p></div>');
+    return document.getElementById('copilot-start-stock');
+  } catch (e) {
+    return null;
+  }
+}
+
+function _removeCopilotNodeById(id) {
+  try {
+    const el = document.getElementById(id);
+    if (el && typeof el.remove === 'function') el.remove();
   } catch (e) {
     // 移除失敗不得往上拋。
   }
 }
 
-/**
- * 依 `blockId` 前綴決定工具條的建立／移除（PRD §4.6 不對稱工具列，
- * spec §7.4 條款 1）。**單一判定函式**——SDD §9 擴充預留點：Roadmap P1
- * 個股專屬速覽屆時只需在此加一個分支。
- *
- * @param {string} blockId `industry-N` 或 `target-N`
- */
-function _applyOverviewToolbarForTopic(blockId) {
-  if (typeof blockId === 'string' && blockId.indexOf('industry-') === 0) {
-    _ensureCopilotOverviewToolbar();
-  } else {
-    _removeCopilotOverviewToolbar();
-  }
+/** 切到個股主題時把開始卡自 DOM 移除（spec-028 §7.4 條款 1）。 */
+function _removeCopilotOverviewToolbar() {
+  _removeCopilotNodeById('copilot-overview-toolbar');
+}
+
+/** 換到新主題時把開始卡（或個股提示）移到對話流末端並顯示；同主題不動。 */
+function _placeCopilotStartAtTopicEnd(el) {
+  if (!el) return;
+  const ctx = _copilotDiscussionContext;
+  const key = ctx ? _copilotTopicKey(ctx.epId, ctx.blockId) : '';
+  if (el.dataset && el.dataset.topic === key) return;
+  if (el.dataset) el.dataset.topic = key;
+  el.hidden = false;
+  const thread = document.getElementById('copilot-chat-thread');
+  if (thread && thread.children && thread.children[thread.children.length - 1] !== el) thread.appendChild(el);
 }
 
 /**
- * 點擊標頭收折／展開工具條（由 `_handleDelegatedClick` 呼叫）。
+ * 依 blockId 前綴決定開始卡的建立／移除（PRD §4.6）。**單一判定函式**——
+ * SDD §9 擴充預留點：個股專屬速覽屆時只需在此加一個分支。
+ * @param {string} blockId `industry-N` 或 `target-N`
  */
-function _toggleCopilotOverviewToolbar() {
+function _applyOverviewToolbarForTopic(blockId) {
   try {
-    const body = document.getElementById('copilot-overview-toolbar-body');
-    const arrow = document.getElementById('copilot-overview-toolbar-arrow');
-    if (!body) return;
-    const wasCollapsed = !!body.hidden;
-    body.hidden = !wasCollapsed;
-    if (arrow) arrow.textContent = wasCollapsed ? '▾' : '▸';
+    if (typeof blockId === 'string' && blockId.indexOf('industry-') === 0) {
+      _removeCopilotNodeById('copilot-start-stock');
+      _placeCopilotStartAtTopicEnd(_ensureCopilotOverviewToolbar());
+    } else {
+      _removeCopilotOverviewToolbar();
+      _placeCopilotStartAtTopicEnd(_ensureCopilotStockHint());
+    }
+    _syncCopilotRegenButtons();
+    _renderCopilotStartNotes();
   } catch (e) {
-    // 收折/展開失敗不得往上拋。
+    // 例外不得影響帶入討論的其餘流程。
+  }
+}
+
+function _syncCopilotStartNode(id, wanted, anchor, pos, html) {
+  const el = document.getElementById(id);
+  if (!wanted) {
+    if (el && typeof el.remove === 'function') el.remove();
+    return;
+  }
+  if (!el && anchor && typeof anchor.insertAdjacentHTML === 'function') anchor.insertAdjacentHTML(pos, html);
+}
+
+/** 開始卡附註（spec §7.3）：額度提示只在尚未錨定時存在；提問引導只在產業主題未送出過問題時存在。 */
+function _renderCopilotStartNotes() {
+  try {
+    const ctx = _copilotDiscussionContext;
+    const isIndustry = !!ctx && String(ctx.blockId || '').indexOf('industry-') === 0;
+    const anchored = !!(ctx && typeof ctx.sessionId === 'string' && ctx.sessionId.length > 0);
+    const noteAnchor = document.getElementById(isIndustry ? 'copilot-generate-btn' : 'copilot-start-stock');
+    _syncCopilotStartNode('copilot-start-quota-note', !!ctx && !anchored, noteAnchor, isIndustry ? 'afterend' : 'beforeend',
+      '<p class="copilot-start-note" id="copilot-start-quota-note"></p>');
+    const note = document.getElementById('copilot-start-quota-note');
+    if (note && ctx && !anchored) {
+      note.textContent = isIndustry ? COPILOT_START_QUOTA_NOTE_INDUSTRY : COPILOT_START_QUOTA_NOTE_STOCK;
+    }
+    const toolbar = isIndustry ? document.getElementById('copilot-overview-toolbar') : null;
+    _syncCopilotStartNode('copilot-start-or-ask', !!toolbar && _copilotAskedContext !== ctx, toolbar, 'beforeend',
+      '<p class="copilot-start-or-ask" id="copilot-start-or-ask"><span>或直接在下方向專家提問' + _copilotIcon('down') + '</span></p>');
+    _syncCopilotStockOptions(!!ctx && String(ctx.blockId || '').indexOf('target-') === 0);
+  } catch (e) {
+    // 附註更新失敗不得影響其餘流程。
+  }
+}
+
+/** 「換個設定重新產出」只在目前主題的速覽卡上可見（spec §7.4）。 */
+function _syncCopilotRegenButtons() {
+  try {
+    if (typeof document.querySelectorAll !== 'function') return;
+    const ctx = _copilotDiscussionContext;
+    document.querySelectorAll('[data-action="regen-copilot-overview"]').forEach((btn) => {
+      const card = typeof btn.closest === 'function' ? btn.closest('.copilot-overview-card') : null;
+      btn.hidden = !(ctx && card && card.dataset
+        && card.dataset.epId === ctx.epId && card.dataset.blockId === ctx.blockId);
+    });
+  } catch (e) {
+    // 例外不得往上拋。
+  }
+}
+
+/** 「換個設定重新產出」：開始卡顯示、移到對話流末端並捲到可見（spec §7.4）。 */
+function _regenCopilotOverview() {
+  try {
+    const toolbar = document.getElementById('copilot-overview-toolbar');
+    const thread = document.getElementById('copilot-chat-thread');
+    if (!toolbar || !thread) return;
+    toolbar.hidden = false;
+    thread.appendChild(toolbar);
+    _renderCopilotStartNotes();
+    if (typeof toolbar.scrollIntoView === 'function') toolbar.scrollIntoView({ block: 'nearest' });
+  } catch (e) {
+    // 例外不得往上拋。
   }
 }
 
@@ -2247,39 +2452,79 @@ function _copilotPersonaLabel(persona) {
   return (persona && COPILOT_PERSONA_LABELS[persona]) || COPILOT_PERSONA_DEFAULT_LABEL;
 }
 
-/**
- * 建立專家選單的 DOM（若尚未建立），插在上下文指示條之後。比照
- * `_ensureCopilotReportArea()` 的既有慣例：只建立一次，點擊監聽器在
- * 建立當下一併綁定（委派點擊已涵蓋選單項目本身，這裡不需另綁）。
- */
+/** SPEC-030 §7.6 畫面用（名稱＝LABELS 去掉開頭 emoji）；匯出檔仍用 LABELS。 */
+const COPILOT_PERSONA_DISPLAY = {
+  sop: { name: '個股操盤特助', desc: '催化劑、關鍵數據與風險訊號', icon: 'chart' },
+  chain: { name: '供應鏈情報官', desc: '上下游訂單、交期與料源', icon: 'link' },
+  bear: { name: '風險長', desc: '下檔風險與反方論點', icon: 'shield' },
+  buffett: { name: '長期價值視角顧問', desc: '護城河、現金流與長期持有', icon: 'clock' },
+};
+const COPILOT_PERSONA_DEFAULT_DISPLAY = { name: '通用分析師', desc: '綜合觀點，適合第一次提問', icon: 'user' };
+
+/** @param {string|null} persona @returns {{name:string,desc:string,icon:string}} */
+function _copilotPersonaDisplay(persona) {
+  return (persona && Object.prototype.hasOwnProperty.call(COPILOT_PERSONA_DISPLAY, persona))
+    ? COPILOT_PERSONA_DISPLAY[persona] : COPILOT_PERSONA_DEFAULT_DISPLAY;
+}
+
+/** 建立專家選單（只建一次）。SPEC-030 §7.6：放在輸入框內左下，往上展開。 */
 function _ensureCopilotPersonaMenu() {
   try {
-    const body = document.getElementById('copilot-panel-body');
-    if (!body) return null;
     let menu = document.getElementById('copilot-persona-menu');
     if (menu) return menu;
-    const optionsHtml = Object.keys(COPILOT_PERSONA_LABELS).map((p) =>
-      `<button type="button" data-action="select-copilot-persona" data-persona="${escHtml(p)}" style="display:block;width:100%;text-align:left;padding:8px 12px;font-size:12px;border:none;background:transparent;cursor:pointer;">${escHtml(COPILOT_PERSONA_LABELS[p])}</button>`
-    ).join('');
-    const html = [
-      '<div id="copilot-persona-menu" style="position:relative;margin-bottom:12px;">',
-      '<button type="button" id="copilot-persona-trigger" data-action="toggle-persona-menu" aria-haspopup="true" aria-expanded="false" style="display:flex;align-items:center;gap:4px;font-size:12px;border:1px solid #D1D5DB;border-radius:6px;padding:4px 10px;background:#fff;cursor:pointer;">',
-      `<span id="copilot-persona-trigger-label">${escHtml(COPILOT_PERSONA_DEFAULT_LABEL)}</span> ▾`,
+    _ensureCopilotComposer();
+    const bar = document.getElementById('copilot-composer-bar');
+    if (!bar) return null;
+    const optionsHtml = Object.keys(COPILOT_PERSONA_LABELS).map((p) => {
+      const d = _copilotPersonaDisplay(p);
+      return `<button type="button" class="copilot-persona-opt" role="menuitemradio" aria-checked="false" data-action="select-copilot-persona" data-persona="${escHtml(p)}">`
+        + `<span class="copilot-avatar">${_copilotIcon(d.icon)}</span>`
+        + `<span><span class="copilot-persona-name">${escHtml(d.name)}</span><span class="copilot-persona-desc">${escHtml(d.desc)}</span></span></button>`;
+    }).join('');
+    bar.insertAdjacentHTML('afterbegin', [
+      '<div id="copilot-persona-menu" class="copilot-persona">',
+      '<button type="button" id="copilot-persona-trigger" class="copilot-persona-btn" data-action="toggle-persona-menu" aria-haspopup="true" aria-expanded="false">',
+      '<span class="copilot-avatar" id="copilot-persona-trigger-icon"></span><span id="copilot-persona-trigger-label"></span>',
+      _copilotIcon('chevron'),
       '</button>',
-      '<div id="copilot-persona-list" hidden style="position:absolute;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid #D1D5DB;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:1;min-width:170px;">',
-      optionsHtml,
+      `<div id="copilot-persona-list" class="copilot-persona-list" role="menu" hidden>${optionsHtml}</div>`,
       '</div>',
-      '</div>',
-    ].join('');
-    const indicator = document.getElementById('copilot-context-indicator');
-    if (indicator && indicator.insertAdjacentHTML) {
-      indicator.insertAdjacentHTML('afterend', html);
-    } else {
-      body.insertAdjacentHTML('afterbegin', html);
+    ].join(''));
+    _syncCopilotPersonaUi();
+    if (typeof document.addEventListener === 'function') {
+      // 捕獲階段：選單開著時 Esc 只關選單。
+      document.addEventListener('keydown', (e) => {
+        const list = document.getElementById('copilot-persona-list');
+        if (e.key !== 'Escape' || !list || list.hidden) return;
+        list.hidden = true;
+        _syncPersonaMenuAria();
+        e.stopPropagation();
+      }, true);
     }
     return document.getElementById('copilot-persona-menu');
   } catch (e) {
     return null;
+  }
+}
+
+/** 依目前專家更新觸發鈕、選項 aria-checked 與 placeholder（§7.6）。 */
+function _syncCopilotPersonaUi() {
+  try {
+    const d = _copilotPersonaDisplay(_copilotSelectedPersona);
+    const label = document.getElementById('copilot-persona-trigger-label');
+    if (label) label.textContent = d.name;
+    const icon = document.getElementById('copilot-persona-trigger-icon');
+    if (icon) icon.innerHTML = _copilotIcon(d.icon);
+    const list = document.getElementById('copilot-persona-list');
+    if (list && list.querySelectorAll) {
+      list.querySelectorAll('[data-action="select-copilot-persona"]').forEach((b) => {
+        b.setAttribute('aria-checked', b.dataset.persona === _copilotSelectedPersona ? 'true' : 'false');
+      });
+    }
+    const input = document.getElementById('copilot-composer-input');
+    if (input) input.placeholder = _isCopilotTopicTurnLimited() ? COPILOT_TURN_LIMIT_PLACEHOLDER : '問' + d.name + '…';
+  } catch (e) {
+    // 例外不得往上拋。
   }
 }
 
@@ -2334,7 +2579,7 @@ function _maybeCollapsePersonaMenu(event) {
  * T-2717 才會真正渲染氣泡的地方，本 Task 只需要一個空容器可以插入
  * 分隔線——比照 `_ensureCopilotReportArea()` 的既有慣例，只建立一次。
  *
- * @param {string} text 分隔線文字（不含裝飾符號，本函式統一加上）
+ * @param {string} text 分隔線文字（兩側的線由 CSS 畫）
  */
 function _insertCopilotSystemDivider(text) {
   try {
@@ -2348,11 +2593,7 @@ function _insertCopilotSystemDivider(text) {
     if (!thread || typeof thread.appendChild !== 'function') return;
     const divider = document.createElement('div');
     divider.className = 'copilot-system-divider';
-    divider.style.textAlign = 'center';
-    divider.style.fontSize = '11px';
-    divider.style.color = '#94A3B8';
-    divider.style.margin = '10px 0';
-    divider.textContent = '── ' + text + ' ──';
+    divider.textContent = text;
     thread.appendChild(divider);
   } catch (e) {
     // 例外不得往上拋。
@@ -2384,9 +2625,8 @@ function _selectCopilotPersona(persona) {
       return;
     }
     _copilotSelectedPersona = persona;
-    const triggerLabel = document.getElementById('copilot-persona-trigger-label');
-    if (triggerLabel) triggerLabel.textContent = _copilotPersonaLabel(persona);
-    _insertCopilotSystemDivider('已切換至 ' + _copilotPersonaLabel(persona));
+    _syncCopilotPersonaUi();
+    _insertCopilotSystemDivider('已切換至 ' + _copilotPersonaDisplay(persona).name);
     if (list) list.hidden = true;
     _syncPersonaMenuAria();
     // T-2719：若已有錨定的主題，同步更新還原記錄裡的 persona——
@@ -2447,12 +2687,13 @@ function _ensureCopilotComposer() {
     }
     let composer = document.getElementById('copilot-composer');
     if (composer) return composer;
+    // 高度上下限改由 CSS 給（與 COPILOT_COMPOSER_*_HEIGHT 相同）。
     footer.insertAdjacentHTML('beforeend', [
-      '<div id="copilot-composer" style="margin-top:12px;border-top:1px solid #E5E7EB;padding-top:12px;">',
-      `<textarea id="copilot-composer-input" maxlength="${COPILOT_COMPOSER_MAX_LEN}" placeholder="輸入你的問題…" style="width:100%;box-sizing:border-box;font-size:13px;padding:8px;border:1px solid #D1D5DB;border-radius:6px;resize:none;height:${COPILOT_COMPOSER_MIN_HEIGHT}px;max-height:${COPILOT_COMPOSER_MAX_HEIGHT}px;overflow-y:auto;"></textarea>`,
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">',
-      '<span id="copilot-composer-counter" style="font-size:11px;color:#6B7280;"></span>',
-      '<button type="button" id="copilot-composer-submit" data-action="submit-copilot-message" disabled style="border:none;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:600;padding:7px 16px;border-radius:999px;cursor:pointer;">送出</button>',
+      '<div id="copilot-composer" class="copilot-composer">',
+      `<textarea id="copilot-composer-input" maxlength="${COPILOT_COMPOSER_MAX_LEN}" placeholder="問${escHtml(_copilotPersonaDisplay(_copilotSelectedPersona).name)}…"></textarea>`,
+      '<div id="copilot-composer-bar" class="copilot-composer-bar">',
+      '<span id="copilot-composer-counter" class="copilot-composer-count"></span>',
+      `<button type="button" id="copilot-composer-submit" class="copilot-send-btn" data-action="submit-copilot-message" aria-label="送出" disabled>${_copilotIcon('up')}</button>`,
       '</div>',
       '</div>',
     ].join(''));
@@ -2521,7 +2762,7 @@ function _updateCopilotComposerCounter() {
     if (!input || !counter) return;
     const len = (input.value || '').length;
     counter.textContent = len + ' / ' + COPILOT_COMPOSER_MAX_LEN;
-    counter.style.color = len >= COPILOT_COMPOSER_MAX_LEN ? '#DC2626' : '#6B7280';
+    counter.classList.toggle('is-max', len >= COPILOT_COMPOSER_MAX_LEN);
   } catch (e) {
     // 例外不得往上拋。
   }
@@ -2537,7 +2778,7 @@ function _applyCopilotComposerSubmitState() {
     const submitBtn = document.getElementById('copilot-composer-submit');
     if (!input || !submitBtn) return;
     const trimmedEmpty = (input.value || '').trim().length === 0;
-    submitBtn.disabled = trimmedEmpty || _copilotComposerSending;
+    submitBtn.disabled = trimmedEmpty || _copilotComposerSending || _isCopilotTopicTurnLimited();
   } catch (e) {
     // 例外不得往上拋。
   }
@@ -2568,7 +2809,17 @@ function _submitCopilotComposerMessage() {
     _updateCopilotComposerCounter();
     if (input.style) input.style.height = COPILOT_COMPOSER_MIN_HEIGHT + 'px';
 
-    _dispatchCopilotComposerMessage(text);
+    // SPEC-030 §7.3：更新開始卡附註；送出結束後（可能已錨定）再更新一次。
+    _copilotAskedContext = _copilotDiscussionContext;
+    const dispatching = _dispatchCopilotComposerMessage(text);
+    _renderCopilotStartNotes();
+    // §7.9：dispatch 同步段已建好 AI 泡泡（thread 末端）；請求進行中才標 pending 顯示等待指示。
+    const thread = document.getElementById('copilot-chat-thread');
+    const last = thread && thread.lastElementChild;
+    const reply = last && last.dataset && last.dataset.role === 'assistant' ? last : null;
+    if (reply) reply.dataset.pending = '';
+    const settle = () => { if (reply) delete reply.dataset.pending; _renderCopilotStartNotes(); };
+    if (dispatching && typeof dispatching.then === 'function') dispatching.then(settle, settle);
 
     setTimeout(() => {
       _copilotComposerSending = false;
@@ -2627,6 +2878,8 @@ async function _dispatchCopilotComposerMessage(text) {
       mode: isFollow ? 'follow' : 'anchor',
       session_id: isFollow ? _copilotDiscussionContext.sessionId : null,
       persona: _copilotSelectedPersona,
+      horizon: _getCopilotSelection().horizon,
+      style: _getCopilotSelection().style,
       messages: messages,
     };
     const headers = { 'Content-Type': 'application/json' };
@@ -2805,9 +3058,8 @@ function _saveCopilotSessionRestore() {
 }
 
 /**
- * 清除還原記錄。呼叫時機：`follow` 收到 `403 session_invalid`（見
- * `_handleCopilotChatHttpError()`）——主題已過期或已回補，本地記錄
- * 留著只會在下次重整時誤導使用者以為還能繼續。
+ * 清除還原記錄。呼叫時機：登出，以及 `follow` 收到 `403 session_invalid`
+ * ——主題已過期或已回補，留著只會誤導使用者以為還能繼續。
  */
 function _clearCopilotSessionRestore() {
   try {
@@ -2851,8 +3103,7 @@ function _restoreCopilotSessionFromStorage() {
       _copilotSelectedPersona = record.persona;
     }
     _updateCopilotContextIndicator();
-    const triggerLabel = document.getElementById('copilot-persona-trigger-label');
-    if (triggerLabel) triggerLabel.textContent = _copilotPersonaLabel(_copilotSelectedPersona);
+    _syncCopilotPersonaUi();
   } catch (e) {
     // 例外不得往上拋，見函式說明。
   }
@@ -2882,35 +3133,37 @@ function _appendCopilotChatBubble(role, text) {
     }
     if (!thread || typeof thread.appendChild !== 'function') return null;
 
+    // className 維持單一 class（既有測試全等比對），樣式由 data-role 交給 CSS。
     const bubble = document.createElement('div');
     bubble.className = 'copilot-chat-bubble';
-    bubble.style.display = 'flex';
-    bubble.style.margin = '8px 0';
-    bubble.style.justifyContent = role === 'user' ? 'flex-end' : 'flex-start';
+    bubble.dataset.role = role === 'user' ? 'user' : 'assistant';
 
+    // 內文須是氣泡第一個子節點（既有呼叫端以 children[0] 取回）。
     const inner = document.createElement('div');
-    inner.style.maxWidth = '85%';
-    inner.style.padding = '8px 12px';
-    inner.style.borderRadius = '10px';
-    inner.style.fontSize = '13px';
-    inner.style.whiteSpace = 'pre-wrap';
-    inner.style.background = role === 'user' ? 'var(--accent)' : 'var(--paper-2)';
-    inner.style.color = role === 'user' ? '#fff' : '#0F172A';
+    inner.className = 'copilot-chat-text';
     inner.textContent = text || '';
     bubble.appendChild(inner);
 
     if (role === 'assistant') {
-      // T-2717：複製筆記按鈕，附掛在 AI 氣泡旁。
+      // SPEC-030 §7.5：專家 icon、名稱（建立當下的專家）、複製鈕；CSS 以 order 排到內文上方。
+      const persona = _copilotPersonaDisplay(_copilotSelectedPersona);
+      const who = document.createElement('div');
+      who.className = 'copilot-reply-who';
+      const avatar = document.createElement('span');
+      avatar.className = 'copilot-avatar';
+      avatar.innerHTML = _copilotIcon(persona.icon);
+      const name = document.createElement('span');
+      name.textContent = persona.name;
       const copyBtn = document.createElement('button');
       copyBtn.type = 'button';
+      copyBtn.className = 'copilot-copy-btn';
       copyBtn.setAttribute('aria-label', '複製這則筆記');
-      copyBtn.style.marginLeft = '4px';
-      copyBtn.style.border = 'none';
-      copyBtn.style.background = 'transparent';
-      copyBtn.style.cursor = 'pointer';
-      copyBtn.textContent = '📋';
+      copyBtn.innerHTML = _copilotIcon('copy');
       copyBtn.addEventListener('click', () => _copyCopilotChatNote(inner));
-      bubble.appendChild(copyBtn);
+      who.appendChild(avatar);
+      who.appendChild(name);
+      who.appendChild(copyBtn);
+      bubble.appendChild(who);
     }
 
     thread.appendChild(bubble);
@@ -2970,7 +3223,7 @@ function _ensureCopilotChatErrorArea() {
     if (!body) return null;
     let errEl = document.getElementById('copilot-chat-error');
     if (errEl) return errEl;
-    body.insertAdjacentHTML('beforeend', '<div id="copilot-chat-error" hidden style="color:#DC2626;font-size:12px;margin-top:8px;"></div>');
+    body.insertAdjacentHTML('beforeend', '<div id="copilot-chat-error" hidden></div>');
     return document.getElementById('copilot-chat-error');
   } catch (e) {
     return null;
@@ -3025,7 +3278,7 @@ function _showCopilotToast(message) {
     if (!body) return;
     let toast = document.getElementById('copilot-toast');
     if (!toast) {
-      body.insertAdjacentHTML('beforeend', '<div id="copilot-toast" hidden style="text-align:center;font-size:12px;background:#111827;color:#fff;border-radius:6px;padding:6px 10px;margin-top:8px;"></div>');
+      body.insertAdjacentHTML('beforeend', '<div id="copilot-toast" hidden></div>');
       toast = document.getElementById('copilot-toast');
     }
     if (!toast) return;
@@ -3140,17 +3393,14 @@ function _exportCopilotChatTranscript() {
  */
 function _ensureCopilotExportButton() {
   try {
-    const body = document.getElementById('copilot-panel-body');
-    if (!body) return null;
     let btn = document.getElementById('copilot-export-chat-btn');
     if (btn) return btn;
-    const html = '<button type="button" id="copilot-export-chat-btn" data-action="export-copilot-chat" style="margin-left:8px;font-size:12px;border:1px solid #D1D5DB;border-radius:6px;padding:4px 10px;background:#fff;cursor:pointer;">📥 .md</button>';
-    const menu = document.getElementById('copilot-persona-menu');
-    if (menu && menu.insertAdjacentHTML) {
-      menu.insertAdjacentHTML('afterend', html);
-    } else {
-      body.insertAdjacentHTML('afterbegin', html);
-    }
+    // SPEC-030 §7.2：匯出是整場對話層級的動作，放在標題列、關閉鈕之前。
+    const closeBtn = document.getElementById('copilot-panel-close');
+    if (!closeBtn || !closeBtn.insertAdjacentHTML) return null;
+    closeBtn.insertAdjacentHTML('beforebegin',
+      '<button type="button" class="copilot-icon-btn" id="copilot-export-chat-btn" data-action="export-copilot-chat" aria-label="匯出整場對話為 Markdown">'
+      + _copilotIcon('download') + '<span>.md</span></button>');
     return document.getElementById('copilot-export-chat-btn');
   } catch (e) {
     return null;
@@ -3162,15 +3412,8 @@ function _ensureCopilotExportButton() {
 // ═══════════════════════════════════════════════════════════════════════
 
 /**
- * 建立「生成」按鈕與報告區的 DOM（若尚未建立）。節點用 JS 動態插入
- * `#copilot-panel-body`，不是寫死在 index.html——比照 `_renderDeepModal()`
- * 動態填 `dd-col-left` 的既有慣例。只建立一次（`getElementById` 已存在
- * 就直接回傳），避免重複插入。
- *
- * **T-2713：不再插入舊版單輪追問輸入區與匯出鍵**——
- * 那是 SPEC-026 的單輪模型，本輪由多輪多專家對話工作台取代，改為
- * T-2714 之後的 Task 各自建立自己的容器（比照本函式的既有慣例：獨立
- * 子容器，不重新產生整個 body 的 innerHTML）。
+ * 建立舊版報告區（只建立一次）。SPEC-030 §7.1：產出鈕已移到開始卡，這裡
+ * 不再有按鈕且整區 hidden；#copilot-report-text 保留（既有 AC-13 依賴）。
  */
 function _ensureCopilotReportArea() {
   try {
@@ -3179,10 +3422,9 @@ function _ensureCopilotReportArea() {
     let area = document.getElementById('copilot-report-area');
     if (area) return area;
     body.insertAdjacentHTML('beforeend', [
-      '<div id="copilot-report-area" style="margin-top:16px;">',
-      '<button type="button" class="dd-more-btn" id="copilot-generate-btn" data-action="start-copilot-generate">🚀 開始生成</button>',
-      '<div id="copilot-report-text" style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin-top:10px;"></div>',
-      '<div id="copilot-report-error" hidden style="color:#DC2626;font-size:12px;margin-top:8px;"></div>',
+      '<div id="copilot-report-area" hidden>',
+      '<div id="copilot-report-text"></div>',
+      '<div id="copilot-report-error" hidden></div>',
       '</div>',
     ].join(''));
     return document.getElementById('copilot-report-area');
@@ -3203,6 +3445,9 @@ let _copilotGenerateInflight = false;
  */
 let _copilotOverviewCardSeq = 0;
 
+/** 產出中速覽卡的進度指示（SPEC-030 §7.4）。 */
+let _copilotOverviewProgressEl = null;
+
 /**
  * 在對話流（`#copilot-chat-thread`）末端新增一張可收折的速覽文件卡
  * （T-2814）。**取代舊版單一靜態報告區的顯示路徑，但不移除
@@ -3215,100 +3460,135 @@ let _copilotOverviewCardSeq = 0;
  * 標題與其餘動態文字一律以 `textContent` 賦值（比照
  * `_appendCopilotChatBubble()` 的既有慣例），不經過 `innerHTML`。
  *
+ * SPEC-030 §7.4：DOM 形狀維持 card → [標頭, 內文區, 進度]、標頭 → [標題,
+ * 箭頭, 小標]（小標由 CSS 排到最上方）、內文區 → [內文, 錯誤]。
+ *
  * @param {string} epId
  * @param {string} blockId
  * @param {string} title 產出當時的主題標題（來自 `#copilot-panel-title`）
- * @returns {{textEl:*, errEl:*}|null} 供 `_consumeCopilotStream()`／
- *   `_handleCopilotGenerateHttpError()` 原樣使用的內文與錯誤節點；
- *   建立失敗時回傳 `null`
+ * @returns {{textEl:*, errEl:*, cardEl:*, bodyEl:*}|null}
  */
 function _appendCopilotOverviewCard(epId, blockId, title) {
   try {
-    const body = document.getElementById('copilot-panel-body');
-    if (!body) return null;
-    let thread = document.getElementById('copilot-chat-thread');
-    if (!thread) {
-      body.insertAdjacentHTML('beforeend', '<div id="copilot-chat-thread"></div>');
-      thread = document.getElementById('copilot-chat-thread');
-    }
+    const thread = _copilotChatThread();
     if (!thread || typeof thread.appendChild !== 'function') return null;
 
     _copilotOverviewCardSeq += 1;
     const bodyId = 'copilot-overview-card-body-' + _copilotOverviewCardSeq;
     const arrowId = 'copilot-overview-card-arrow-' + _copilotOverviewCardSeq;
+    const selection = _getCopilotSelection();
 
-    const card = document.createElement('div');
+    const card = document.createElement('article');
     card.className = 'copilot-overview-card';
     if (card.dataset) {
       card.dataset.epId = epId || '';
       card.dataset.blockId = blockId || '';
     }
-    card.style.margin = '8px 0';
-    card.style.border = '1px solid #E2E8F0';
-    card.style.borderRadius = '8px';
 
-    const header = document.createElement('div');
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'copilot-overview-card-head';
     header.setAttribute('data-action', 'toggle-overview-card');
+    header.setAttribute('aria-expanded', 'true');
+    header.setAttribute('aria-controls', bodyId);
     if (header.dataset) {
       header.dataset.bodyId = bodyId;
       header.dataset.arrowId = arrowId;
     }
-    header.style.cursor = 'pointer';
-    header.style.padding = '8px 10px';
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
 
     const titleSpan = document.createElement('span');
-    titleSpan.textContent = '⚡ ' + (title || '');
+    titleSpan.className = 'copilot-overview-card-title';
+    titleSpan.textContent = title || '';
     const arrowSpan = document.createElement('span');
     arrowSpan.id = arrowId;
-    arrowSpan.textContent = '▾';
+    arrowSpan.className = 'copilot-overview-card-chevron';
+    arrowSpan.innerHTML = _copilotIcon('chevron');
+    const kicker = document.createElement('span');
+    kicker.className = 'copilot-overview-card-kicker';
+    kicker.textContent = '產業全景速覽・' + COPILOT_OPTION_LABELS.horizon[selection.horizon]
+      + '／' + COPILOT_OPTION_LABELS.style[selection.style];
     header.appendChild(titleSpan);
     header.appendChild(arrowSpan);
+    header.appendChild(kicker);
 
     const cardBody = document.createElement('div');
     cardBody.id = bodyId;
-    cardBody.style.padding = '0 10px 10px';
+    cardBody.className = 'copilot-overview-card-body';
 
     const textEl = document.createElement('div');
-    textEl.style.whiteSpace = 'pre-wrap';
-    textEl.style.fontSize = '13px';
-    textEl.style.lineHeight = '1.6';
+    textEl.className = 'copilot-overview-card-text';
 
     const errEl = document.createElement('div');
+    errEl.className = 'copilot-overview-card-error';
     errEl.hidden = true;
-    errEl.style.color = '#DC2626';
-    errEl.style.fontSize = '12px';
-    errEl.style.marginTop = '8px';
+
+    const progress = document.createElement('div');
+    progress.className = 'copilot-progress';
+    progress.setAttribute('role', 'progressbar');
+    progress.setAttribute('aria-label', '速覽產出中');
 
     cardBody.appendChild(textEl);
     cardBody.appendChild(errEl);
     card.appendChild(header);
     card.appendChild(cardBody);
+    card.appendChild(progress);
     thread.appendChild(card);
+    _copilotOverviewProgressEl = progress;
 
-    return { textEl: textEl, errEl: errEl };
+    return { textEl: textEl, errEl: errEl, cardEl: card, bodyEl: cardBody };
   } catch (e) {
     return null;
   }
 }
 
-/**
- * 點擊速覽文件卡標頭收折／展開（T-2814，比照
- * `_toggleCopilotOverviewToolbar()` 的既有慣例，由 `_handleDelegatedClick`
- * 呼叫）。
- *
- * @param {string} bodyId
- * @param {string} arrowId
- */
+function _removeCopilotOverviewProgress() {
+  try {
+    const el = _copilotOverviewProgressEl;
+    _copilotOverviewProgressEl = null;
+    if (el && typeof el.remove === 'function') el.remove();
+  } catch (e) {
+    // 例外不得往上拋。
+  }
+}
+
+/** 串流正常結束（錯誤節點仍 hidden）才加頁尾並收起同主題開始卡（§7.3／§7.4）。 */
+function _finishCopilotOverviewCard(card) {
+  try {
+    if (!card || !card.errEl || !card.errEl.hidden || !card.bodyEl) return;
+    const foot = document.createElement('div');
+    foot.className = 'copilot-overview-card-foot';
+    const note = document.createElement('span');
+    note.textContent = 'AI 生成內容，不構成投資建議';
+    const regen = document.createElement('button');
+    regen.type = 'button';
+    regen.className = 'copilot-link-btn';
+    regen.setAttribute('data-action', 'regen-copilot-overview');
+    regen.textContent = '換個設定重新產出';
+    foot.appendChild(note);
+    foot.appendChild(regen);
+    card.bodyEl.appendChild(foot);
+
+    const ds = card.cardEl && card.cardEl.dataset;
+    const toolbar = document.getElementById('copilot-overview-toolbar');
+    if (toolbar && ds && toolbar.dataset && toolbar.dataset.topic === _copilotTopicKey(ds.epId, ds.blockId)) {
+      toolbar.hidden = true;
+    }
+    _syncCopilotRegenButtons();
+  } catch (e) {
+    // 例外不得往上拋。
+  }
+}
+
+/** 速覽卡收折／展開：內文節點 hidden（§7.1）；chevron 依 aria-expanded 由 CSS 旋轉。 */
 function _toggleCopilotOverviewCard(bodyId, arrowId) {
   try {
     const cardBody = document.getElementById(bodyId);
-    const arrow = document.getElementById(arrowId);
     if (!cardBody) return;
     const wasVisible = !cardBody.hidden;
     cardBody.hidden = wasVisible;
-    if (arrow) arrow.textContent = wasVisible ? '▸' : '▾';
+    const arrow = document.getElementById(arrowId);
+    const head = arrow && arrow.parentElement;
+    if (head && typeof head.setAttribute === 'function') head.setAttribute('aria-expanded', wasVisible ? 'false' : 'true');
   } catch (e) {
     // 收折/展開失敗不得往上拋。
   }
@@ -3346,9 +3626,7 @@ async function _startCopilotGenerate() {
 
   try {
     const btn = document.getElementById('copilot-generate-btn');
-    const toolbarBtn = document.getElementById('copilot-generate-btn-toolbar');
     if (btn) btn.disabled = true;
-    if (toolbarBtn) toolbarBtn.disabled = true;
 
     const titleEl = document.getElementById('copilot-panel-title');
     const title = (titleEl && titleEl.textContent) || '';
@@ -3383,12 +3661,16 @@ async function _startCopilotGenerate() {
     // 串流末段是否曾經 error，畫面上顯示什麼就匯出什麼）。
     const currentTopic = _copilotExportLog[_copilotExportLog.length - 1];
     if (currentTopic) currentTopic.overview = textEl ? textEl.textContent : '';
+    // SPEC-030 §7.3／§7.4：正常結束（錯誤節點仍 hidden）才加頁尾、收起開始卡。
+    _finishCopilotOverviewCard(card);
   } catch (e) {
     // 呼叫端（_handleDelegatedClick）刻意不 await 本函式，任何未預期
     // 例外都不得變成未處理的 promise rejection——比照本檔其餘 fire-
     // and-forget 函式（如 _fetchCopilotConfig()）的既有慣例。
   } finally {
     _copilotGenerateInflight = false;
+    // SPEC-030 §7.4：串流結束（正常或錯誤）後移除進度指示。
+    _removeCopilotOverviewProgress();
     // T-2506：**不寫死 disabled = false**——改交給
     // _applyCopilotGenerateButtonState()（依 _copilotQuotaExhausted 決定，
     // 該函式與其依賴的模組層變數皆在本檔稍後宣告，函式宣告會被提升，
@@ -3416,6 +3698,7 @@ const COPILOT_HTTP_ERROR_TEXT = {
   '502 upstream_failed': '生成失敗，本次不扣除額度',
   '503 feature_disabled': '生成失敗，本次不扣除額度', // 理論上不可達（§7.1 閘門），仍列出防禦
   '403 tier2_disabled': '此主題深化整理中，敬請期待',
+  '429 session_turn_limit': '這個主題的 10 次討論額度已用完，可以換一則內容繼續討論。',
 };
 
 /**
@@ -3453,6 +3736,12 @@ async function _handleCopilotGenerateHttpError(res, errEl) {
   if (res.status === 403 && errorCode === 'compliance_required') {
     _openComplianceModal();
     return;
+  }
+
+  // SPEC-030 §7.11：記下目前主題輪次已用完並停用輸入與產出；文案照下方對照表顯示。
+  if (res.status === 429 && errorCode === 'session_turn_limit') {
+    _markCopilotTopicTurnLimited();
+    _applyCopilotTurnLimitState();
   }
 
   const key = res.status + ' ' + errorCode;
@@ -3507,6 +3796,12 @@ async function _handleCopilotChatHttpError(res, errEl, isFollow) {
     _updateCopilotContextIndicator();
     if (errEl) { errEl.hidden = false; errEl.textContent = '這個主題已逾時失效，請重新點擊「帶入討論」開始新的討論'; }
     return;
+  }
+
+  // SPEC-030 §7.11：同 _handleCopilotGenerateHttpError()。
+  if (res.status === 429 && errorCode === 'session_turn_limit') {
+    _markCopilotTopicTurnLimited();
+    _applyCopilotTurnLimitState();
   }
 
   const key = res.status + ' ' + errorCode;
@@ -3624,40 +3919,49 @@ let _copilotQuotaExhausted = false;
  * 觸發了一次註定失敗的呼叫）反而會把「用盡」的生成鍵意外重新點亮。
  */
 function _applyCopilotGenerateButtonState() {
+  // SPEC-030 §7.3：產出鈕與 6 個選項一起停用（額度用盡或產出進行中）。
+  const turnLimited = _isCopilotTopicTurnLimited();
+  const disabled = _copilotQuotaExhausted || _copilotGenerateInflight || turnLimited;
+  // B-064：個股主題的選項（#copilot-stock-options）只看額度與輪次；「產出進行中」
+  // 是開始卡（產業主題速覽）的條件，不能連帶停用個股主題的選項。
+  const stockDisabled = _copilotQuotaExhausted || turnLimited;
   const btn = document.getElementById('copilot-generate-btn');
-  if (btn) btn.disabled = _copilotQuotaExhausted;
-  // T-2814：工具條版「立即產出」鈕（見 _ensureCopilotOverviewToolbar()）
-  // id 不同於舊版靜態區的 #copilot-generate-btn，須各自套用同一狀態，
-  // 避免舊區與工具條各自獨立、其中一個忘了同步用盡狀態。
-  const toolbarBtn = document.getElementById('copilot-generate-btn-toolbar');
-  if (toolbarBtn) toolbarBtn.disabled = _copilotQuotaExhausted;
+  if (btn) btn.disabled = disabled;
+  try {
+    document.querySelectorAll('[data-action="select-copilot-option"]').forEach((el) => {
+      el.disabled = el.closest('#copilot-stock-options') ? stockDisabled : disabled;
+    });
+  } catch (e) {
+    // 選項停用失敗不影響產出鈕本身的狀態。
+  }
 }
 
 /**
  * 查詢 `GET /api/me` 並更新剩餘次數顯示與生成鍵的 `disabled` 狀態
  * （T-2506，spec §7.4）。
  *
- * **呼叫時機有兩處**：面板開啟時（`_openCopilotPanel()`，本 Task
- * 新增，滿足「面板常駐顯示剩餘次數」）與收到 `done` 事件時
- * （`_consumeCopilotStream()`，T-2505 已接好呼叫點——**該 Task 的
- * Non-scope「不做 done 事件後的重查」指的是呼叫時機的 wiring，不是
- * 這裡的渲染邏輯**，本 Task 補完的正是這裡）。
+ * 呼叫時機：面板開啟（`_openCopilotPanel()`）、收到 `done` 事件
+ * （`_consumeCopilotStream()`），以及登出（token 已清，只隱藏）。
  *
  * **未登入（`_lastIdToken` 為 `null`）→ 不顯示**（Scope 明訂）：隱藏
  * 節點、不呼叫任何 API。查詢失敗（網路、非 200、欄位缺失）一律隱藏，
  * 不猜測狀態——但**不改動 `_copilotQuotaExhausted`**，避免一次網路
- * 抖動就把「已知用盡」的生成鍵意外重新點亮。
+ * 抖動就把「已知用盡」的生成鍵意外重新點亮。await 期間 token 換了
+ * （登出／換人）→ 丟棄回應，不動任何狀態（SEC-009）。
  */
 async function _refreshCopilotQuota() {
   const quotaEl = document.getElementById('copilot-quota-text');
+  const token = _lastIdToken;
   if (typeof _lastIdToken !== 'string' || _lastIdToken.length === 0) {
     if (quotaEl) quotaEl.hidden = true;
     return;
   }
   try {
     const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + _lastIdToken } });
+    if (_lastIdToken !== token) return;
     if (!res.ok) { if (quotaEl) quotaEl.hidden = true; return; }
     const data = await res.json();
+    if (_lastIdToken !== token) return;
     if (typeof data.quota_limit !== 'number' || typeof data.used_quota !== 'number') {
       if (quotaEl) quotaEl.hidden = true;
       return;
@@ -3763,6 +4067,8 @@ function _syncCopilotOptionVisuals() {
       const selected =
         group === 'horizon' ? _copilotSelection.horizon === value :
         group === 'style' ? _copilotSelection.style === value : false;
+      // SPEC-030 §7.3：選中者 aria-pressed="true"。
+      if (typeof el.setAttribute === 'function') el.setAttribute('aria-pressed', selected ? 'true' : 'false');
       if (!el.classList) return;
       if (selected) el.classList.add('is-selected');
       else el.classList.remove('is-selected');
@@ -3977,6 +4283,7 @@ async function _handleGoogleCredentialResponse(response) {
     // 記住這次登入的 idToken，供彈窗內的 POST /api/compliance 使用——
     // 不落盤，只存在這個閉包能存取的模組層變數（見下方 _lastIdToken）。
     _lastIdToken = idToken;
+    _resumePendingDiscussion();
     await _maybeShowComplianceModal(idToken);
   } catch (e) {
     // 任何失敗一律維持未登入狀態，不拋出（見函式說明）。
@@ -4069,18 +4376,27 @@ function _renderGoogleUserInfo() {
   }
 }
 
-/**
- * 登出：清除記憶體狀態並呼叫 GIS 的 disableAutoSelect()（Scope 明訂）。
- * 不清除任何持久儲存——本來就沒寫過（Non-scope），這裡沒有東西可清。
- */
+/** 登出：丟棄 token 與工作台狀態（SEC-009），呼叫 GIS 的 disableAutoSelect()。 */
 function _handleGoogleLogout() {
   _googleUserDisplay = null;
+  _lastIdToken = null;
+  _copilotDiscussionContext = null;
+  _copilotChatMessages = [];
+  _copilotExportLog = [];
+  _copilotQuotaExhausted = false;
+  _copilotTurnLimitedTopics.clear();
+  _clearCopilotSessionRestore();
+  _closeCopilotPanel();
+  _refreshCopilotQuota();
+  _applyDiscussButtonState();
   try {
+    _copilotChatThread().textContent = '';
+    document.getElementById('copilot-panel').dataset.epId = '';
     if (window.google && window.google.accounts && window.google.accounts.id) {
       window.google.accounts.id.disableAutoSelect();
     }
   } catch (e) {
-    // 忽略——登出動作本身（清除記憶體狀態）已完成，SDK 呼叫失敗不影響它。
+    // 忽略。
   }
   _renderGoogleUserInfo();
 }
@@ -4115,15 +4431,9 @@ function _ddLeadHtml(blockType, orig) {
   return '';
 }
 
-/** 擷取按鈕 HTML；筆記本功能隱藏時回傳空字串（見 LITE_NOTEBOOK_ENABLED）。 */
-function _ddCaptureBtnHtml() {
-  if (!LITE_NOTEBOOK_ENABLED) return '';
-  return `<button class="dd-capture-btn" type="button" title="擷取至筆記（尚未開放）">📌 擷取</button>`;
-}
-
+/** 主持人原始觀點的欄位內容（SPEC-031 §7.4：放進「主持人原始觀點」摺疊區，不含標題列）。 */
 function _ddZoneA(blockType, orig) {
   orig = _asObject(orig);
-  const bar = `<div class="dd-zone-bar"><span class="dd-zone-id">A</span><span class="dd-zone-name">主持人原始觀點</span>${_ddCaptureBtnHtml()}</div>`;
   let inner = '';
 
   if (blockType === '產業動態') {
@@ -4164,21 +4474,21 @@ function _ddZoneA(blockType, orig) {
     `;
   } else if (blockType === 'company') {
     inner = `
-      <div class="dd-name">${escHtml(orig.canonical || '')} <span class="dd-src-mono">${escHtml(orig.ticker || '')}</span></div>
+      ${(orig.canonical || orig.ticker) ? `<div class="dd-name">${escHtml(orig.canonical || '')} <span class="dd-src-mono">${escHtml(orig.ticker || '')}</span></div>` : ''}
       ${orig.via ? `<div class="dd-sub">本集提及：「${escHtml(orig.via)}」</div>` : ''}
     `;
   }
 
-  return bar + `<div class="dd-zone-a">${inner}</div>`;
+  return `<div class="dd-zone-a">${inner}</div>`;
 }
 
-function _ddZoneB(tc, srcText) {
+/** 逐字稿切片（SPEC-031 §7.4：放進「逐字稿原文」摺疊區，不含標題列）。 */
+function _ddZoneB(tc) {
   tc = _asObject(tc);
-  const bar = `<div class="dd-zone-bar"><span class="dd-zone-id">B</span><span class="dd-zone-name">逐字稿原文切片</span><span class="dd-zone-right">${escHtml(srcText)}</span></div>`;
   const drift = tc.drift_detected
     ? `<div class="dd-drift-bar">⚠ 行號定位已擴大範圍（±20 行），以確保相關內容完整收錄</div>`
     : '';
-  return `${bar}<div class="dd-zone-b">
+  return `<div class="dd-zone-b">
     ${drift}
     ${tc.before ? `<div class="dd-tsec dd-tsec-dim"><div class="dd-tsec-head">前文</div><div class="dd-tsec-text">${escHtml(tc.before)}</div></div><div class="dd-tsep"></div>` : ''}
     <div class="dd-tsec dd-tsec-matched"><div class="dd-tsec-head">▶ 原文段落</div><div class="dd-tsec-text">${escHtml(tc.matched || '（無逐字稿資料）')}</div></div>
@@ -4186,108 +4496,69 @@ function _ddZoneB(tc, srcText) {
   </div>`;
 }
 
-function _ddZoneC(blockType, content, disclaimer) {
-  content = _asObject(content);
-  const bar = `<div class="dd-zone-bar"><span class="dd-zone-id">C</span><span class="dd-zone-name">AI 延伸解讀</span><span class="dd-zone-right">✦ gemini-3.7-flash</span>${_ddCaptureBtnHtml()}</div>`;
-  const notice = `<div class="dd-ai-notice">⚠ 以下為 <strong>AI 生成的教育性延伸解讀</strong>，不代表主持人立場，不構成投資建議。</div>`;
+// ── SPEC-031 §7.4：觀點對照、投資提醒、延伸解讀 ──────────────────────
 
-  let fields = '';
-  if (blockType === '產業動態') {
-    fields = _ddCIndustry(content);
-  } else if (blockType === 'company') {
-    fields = _ddCCompany(content);
-  } else {
-    fields = Object.entries(content).map(([k, v]) => {
-      if (!v || (typeof v === 'string' && !v.trim())) return '';
-      const valHtml = typeof v === 'string'
-        ? `<div class="dd-afb">${escHtml(v)}</div>`
-        : `<div class="dd-afb">${escHtml(JSON.stringify(v))}</div>`;
-      return `<div class="dd-af"><div class="dd-afh">${escHtml(k)}</div>${valHtml}</div>`;
+/** 附錄 P-13（.dd-ai-notice）與 P-14（區塊缺 disclaimer 時的頁尾），逐字。 */
+const _DD_AI_NOTICE = '以下為 AI 生成的延伸解讀與多空判讀，非主持人觀點，僅供研究參考，不構成任何投資建議。';
+const _DD_DISCLAIMER = 'AI 生成內容，含 AI 多空判讀，非主持人觀點，不構成投資建議。投資有風險，請自行評估。';
+
+/** 各型別的 [一句話欄位, 節目觀點欄位, 投資提醒欄位]；個股的節目觀點改取 original.via。 */
+const _DD_KEYS = {
+  '新聞事件': ['一句摘要', '主持人立場回扣', '後續觀察點'],
+  '產業動態': ['一句定義', '主持人立場回扣', '追蹤變數'],
+  '標的觀點': ['公司定位', '主持人態度摘要', '關注指標'],
+  'company': ['公司定位', '', '關注指標'],
+};
+
+/** 非空字串原樣回傳，其餘一律回空字串（舊資料、缺欄位不得顯示 undefined／null／[object Object]）。 */
+function _ddText(v) {
+  return typeof v === 'string' && v.trim() ? v : '';
+}
+
+/**
+ * AI綜合判讀：結論、理由、看錯的訊號三者皆為非空字串才顯示。結論不在
+ * 5 個值內時照原文顯示，顏色由 .dd-stance 的預設（中性）樣式負責（§7.9）。
+ */
+function _ddVerdictHtml(v) {
+  v = _asObject(v);
+  const stance = _ddText(v.結論), reason = _ddText(v.理由), falsify = _ddText(v.看錯的訊號);
+  if (!stance || !reason || !falsify) return '';
+  return `<div class="dd-verdict"><div class="dd-verdict-label">AI 綜合判讀 · 非主持人觀點</div>`
+    + `<div class="dd-stance" data-stance="${escHtml(stance)}">${escHtml(stance)}</div>`
+    + `<div class="dd-verdict-row" data-row="reason"><b>理由：</b>${escHtml(reason)}</div>`
+    + `<div class="dd-verdict-row" data-row="falsify"><b>看錯的訊號：</b>${escHtml(falsify)}</div></div>`;
+}
+
+/** 投資提醒：新格式為 {指標, 方向, 時點} 陣列，舊格式為一段字串。 */
+function _ddRemindHtml(v) {
+  if (Array.isArray(v)) {
+    const items = v.map(r => {
+      r = _asObject(r);
+      const what = _ddText(r.指標), dir = _ddText(r.方向), when = _ddText(r.時點);
+      if (!what && !dir && !when) return '';
+      return `<li>${what ? `<span class="what">${escHtml(what)}</span>` : ''}${when ? `<span class="when">${escHtml(when)}</span>` : ''}${dir ? `<span class="dir">${escHtml(dir)}</span>` : ''}</li>`;
     }).join('');
+    return items ? `<ul class="dd-remind">${items}</ul>` : '';
   }
-
-  const footerLine = `<div class="dd-footer-line">${escHtml(disclaimer || 'AI 生成內容，非主持人觀點，亦非投資建議。')}</div>`;
-  return `${bar}<div class="dd-zone-c">${notice}${fields}${footerLine}</div>`;
+  const text = _ddText(v);
+  return text ? `<p class="dd-remind-text">${escHtml(text)}</p>` : '';
 }
 
-function _ddCIndustry(content) {
-  content = _asObject(content);
-  let html = '';
-  if (content['一句定義']) {
-    html += `<div class="dd-af"><div class="dd-afh">一句定義</div><div class="dd-afb-lg">${escHtml(content['一句定義'])}</div></div>`;
+/** 延伸欄位的值。代表性公司、上中下游結構（物件）沿用原本的分組／卡片顯示。 */
+function _ddValueHtml(key, v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v.trim() ? `<div class="dd-afb dd-pre">${escHtml(v)}</div>` : '';
+  const str = (x) => escHtml(typeof x === 'string' ? x : JSON.stringify(x));
+  if (key === '代表性公司' && Array.isArray(v)) return `<div class="dd-afb">${v.map(str).join('、')}</div>`;
+  if (key === '代表性公司' && typeof v === 'object') {
+    return ['台', '美', '日'].filter(r => _asArray(v[r]).length > 0)
+      .map(r => `<div class="dd-region"><span>${r}</span>${_asArray(v[r]).map(str).join('、')}</div>`).join('');
   }
-  if (content['驅動力']) {
-    html += `<div class="dd-af"><div class="dd-afh">驅動力</div><div class="dd-afb">${escHtml(content['驅動力'])}</div></div>`;
+  if (key === '上中下游結構' && typeof v === 'object' && !Array.isArray(v)) {
+    return `<div class="dd-supply-grid">${Object.entries(v).map(([k, x]) =>
+      `<div class="dd-supply-card"><div class="dd-sc-head">${escHtml(k)}</div><div class="dd-sc-body">${str(x)}</div></div>`).join('')}</div>`;
   }
-  if (content['上中下游結構']) {
-    const val = content['上中下游結構'];
-    let inner = '';
-    if (typeof val === 'string') {
-      inner = `<div class="dd-afb">${escHtml(val)}</div>`;
-    } else if (val && typeof val === 'object') {
-      const entries = Object.entries(val);
-      inner = `<div class="dd-supply-grid">${entries.map(([k, v]) =>
-        `<div class="dd-supply-card" data-supply-node="${escHtml(k)}" data-supply-prompt="${escHtml(`請針對供應鏈環節「${k}」進一步解讀其產業地位、代表廠商與投資機會。`)}"><div class="dd-sc-head">${escHtml(k)}</div><div class="dd-sc-body">${escHtml(String(v))}</div></div>`
-      ).join('')}</div>`;
-    }
-    html += `<div class="dd-af"><div class="dd-afh">上中下游結構</div>${inner}</div>`;
-  }
-  if (content['代表性公司']) {
-    const val = content['代表性公司'];
-    let inner = '';
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      const groups = ['台', '美', '日'].filter(region => _asArray(val[region]).length > 0);
-      inner = groups.map(region =>
-        `<div class="dd-region"><span>${escHtml(region)}</span>${_asArray(val[region]).map(c => escHtml(c)).join('、')}</div>`
-      ).join('');
-    } else if (Array.isArray(val)) {
-      inner = `<div class="dd-afb">${val.map(c => escHtml(String(c))).join('、')}</div>`;
-    } else {
-      inner = `<div class="dd-afb">${escHtml(String(val))}</div>`;
-    }
-    html += `<div class="dd-af"><div class="dd-afh">代表性公司</div>${inner}</div>`;
-  }
-  if (content['主持人立場回扣']) {
-    html += `<div class="dd-af"><div class="dd-afh">主持人立場回扣</div><div class="dd-hl-box">${escHtml(content['主持人立場回扣'])}</div></div>`;
-  }
-  if (content['追蹤變數']) {
-    html += `<div class="dd-af"><div class="dd-afh">追蹤變數</div><div class="dd-afb dd-pre">${escHtml(content['追蹤變數'])}</div></div>`;
-  }
-  const knownKeys = new Set(['一句定義', '驅動力', '上中下游結構', '代表性公司', '主持人立場回扣', '追蹤變數']);
-  Object.entries(content).forEach(([k, v]) => {
-    if (knownKeys.has(k) || !v) return;
-    const valHtml = (v && typeof v === 'object')
-      ? `<div class="dd-afb">${escHtml(JSON.stringify(v))}</div>`
-      : `<div class="dd-afb">${escHtml(String(v))}</div>`;
-    html += `<div class="dd-af"><div class="dd-afh">${escHtml(k)}</div>${valHtml}</div>`;
-  });
-  return html;
-}
-
-function _ddCCompany(content) {
-  content = _asObject(content);
-  let html = '';
-  if (content['公司定位']) {
-    html += `<div class="dd-af"><div class="dd-afh">公司定位</div><div class="dd-afb-lg">${escHtml(content['公司定位'])}</div></div>`;
-  }
-  if (content['供應鏈位置']) {
-    html += `<div class="dd-af"><div class="dd-afh">供應鏈位置</div><div class="dd-afb">${escHtml(content['供應鏈位置'])}</div></div>`;
-  }
-  if (content['主要對手']) {
-    html += `<div class="dd-af"><div class="dd-afh">主要對手</div><div class="dd-afb dd-pre">${escHtml(content['主要對手'])}</div></div>`;
-  }
-  if (content['本集提及脈絡']) {
-    html += `<div class="dd-af"><div class="dd-afh">本集提及脈絡</div><div class="dd-hl-box">${escHtml(content['本集提及脈絡'])}</div></div>`;
-  }
-  const known = new Set(['公司定位', '供應鏈位置', '主要對手', '本集提及脈絡']);
-  Object.entries(content).forEach(([k, v]) => {
-    if (known.has(k) || !v) return;
-    const valHtml = (v && typeof v === 'object')
-      ? `<div class="dd-afb">${escHtml(JSON.stringify(v))}</div>`
-      : `<div class="dd-afb">${escHtml(String(v))}</div>`;
-    html += `<div class="dd-af"><div class="dd-afh">${escHtml(k)}</div>${valHtml}</div>`;
-  });
-  return html;
+  return `<div class="dd-afb">${str(v)}</div>`;
 }
 
 // ── coverage 區塊：F-12 裁決 A，原樣保留（不發布 coverage 資料，
@@ -4412,7 +4683,8 @@ function _renderDeepModal(block, epId) {
   const tc = _asObject(block.transcript_context);
   const ai = _asObject(block.ai_extension);
   const content = _asObject(ai.content);
-  const blockType = block.block_type || '';
+  // B-063：產生端的個股區塊沒有 block_type，改依 block_id 前綴 company- 判斷（同後端選 company_blocks 的規則）。
+  const blockType = block.block_type || (String(block.block_id || '').startsWith('company-') ? 'company' : '');
   const srcLines = _asArray(block.source_lines);
   const srcText = srcLines.length === 2 ? `行 ${srcLines[0]}–${srcLines[1]}` : '';
 
@@ -4424,8 +4696,12 @@ function _renderDeepModal(block, epId) {
     'company': '🏢 公司',
   }[blockType] || blockType;
 
-  const title = orig.標題 || orig.canonical || orig.標的 || block.block_id;
+  const title = orig.標題 || orig.canonical || block.canonical || orig.標的 || block.block_id;
   const lead = _ddLeadHtml(blockType, orig);
+  // 個股區塊沒有 block_type，版面型別改看 ai_extension.template_type。
+  const kind = blockType || _ddText(ai.template_type);
+  const [leadKey, hostKey, remindKey] = _DD_KEYS[kind] || ['', '', ''];
+  const sentence = leadKey ? _ddText(content[leadKey]) : '';
 
   document.getElementById('dd-header-left').innerHTML = `
     <div class="dd-meta">
@@ -4436,18 +4712,40 @@ function _renderDeepModal(block, epId) {
     </div>
     <div class="dd-title">${escHtml(title)}</div>
   `;
-  document.getElementById('dd-lead').innerHTML = lead;
+  document.getElementById('dd-lead').innerHTML = sentence ? escHtml(sentence) : lead;
   document.getElementById('dd-footer-id').textContent = `${block.block_id} · ${epId}`;
-
-  const aHtml = _ddZoneA(blockType, orig);
-  const bHtml = _ddZoneB(tc, srcText);
-  const cHtml = _ddZoneC(blockType, content, ai.disclaimer || '');
 
   const isTwCompany = blockType === 'company' && block.market === 'TW' && block.ticker;
   const coverageHtml = isTwCompany ? `<div id="dd-coverage-zone" class="dd-zone-coverage-wrap"></div>` : '';
+  const keys = Object.keys(content);
+  const left = document.getElementById('dd-col-left');
 
-  document.getElementById('dd-col-left').innerHTML = aHtml + bHtml + cHtml + coverageHtml;
-  document.getElementById('dd-col-left').scrollTop = 0;
+  if (!keys.length || (keys.length === 1 && keys[0] === 'error')) {
+    // 失敗區塊（content 為 {} 或只有 error）：與 404 同文案（§7.4）。
+    left.innerHTML = `<div class="dd-empty">目前尚無深入解讀資料</div>`;
+  } else {
+    const hostText = kind === 'company'
+      ? (_ddText(orig.via) ? `本集提及：「${orig.via}」` : '')
+      : (hostKey ? _ddText(content[hostKey]) : '');
+    const host = hostText ? `<div class="dd-host"><div class="dd-host-label">節目觀點</div><div class="dd-host-text">${escHtml(hostText)}</div></div>` : '';
+    const verdict = _ddVerdictHtml(content['AI綜合判讀']);
+    const remind = remindKey ? _ddRemindHtml(content[remindKey]) : '';
+    const used = new Set([leadKey, hostKey, remindKey, 'AI綜合判讀']);
+    const ext = keys.filter(k => !used.has(k)).map(k => {
+      const val = _ddValueHtml(k, content[k]);
+      return val ? `<div class="dd-af"><div class="dd-afh">${escHtml(_labelFor(k, k))}</div>${val}</div>` : '';
+    }).join('');
+    const sec = (id, name, body) => `<section class="dd-sec" data-sec="${id}"><h3 class="dd-sec-h">${name}</h3>${body}</section>`;
+
+    left.innerHTML = (host || verdict ? sec('compare', '觀點對照', `<div class="dd-compare">${host}${verdict}</div>`) : '')
+      + (remind ? sec('remind', '投資提醒', remind) : '')
+      + (ext ? sec('extend', '延伸解讀', `<div class="dd-ai-notice">${_DD_AI_NOTICE}</div>${ext}`) : '')
+      + `<details class="dd-fold" data-sec="original"><summary>主持人原始觀點</summary>${lead ? `<div class="dd-lead">${lead}</div>` : ''}${_ddZoneA(blockType, orig)}</details>`
+      + `<details class="dd-fold" data-sec="transcript"><summary>逐字稿原文${srcText ? `<span class="dd-src-mono">${escHtml(srcText)}</span>` : ''}</summary>${_ddZoneB(tc)}</details>`
+      + `<div class="dd-footer-line">${escHtml(_ddText(ai.disclaimer) || _DD_DISCLAIMER)}</div>`
+      + coverageHtml;
+  }
+  left.scrollTop = 0;
   document.getElementById('dd-col-center').scrollTop = 0;
 
   if (isTwCompany) {

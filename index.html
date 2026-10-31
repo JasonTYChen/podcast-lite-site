@@ -68,6 +68,13 @@
     --pod-mk: #8E3FA5;
     --pod-statementdog: #A8520F;
     --shadow: 0 1px 0 rgba(23,20,15,.04), 0 18px 40px -26px rgba(23,20,15,.45);
+    /* SPEC-030 §7.7／§7.8：Copilot 工作台。面板寬度與閱讀區、閱讀器的讓位值
+       共用同一個變數（SDD H-8），不得在別處另寫數字。 */
+    --copilot-shadow: -24px 0 60px -28px rgba(23,20,15,.35);
+    --copilot-panel-w: min(560px, 50vw);
+    --copilot-seg-on: var(--card);
+    --copilot-seg-shadow: 0 1px 2px rgba(23,20,15,.14);
+    --copilot-scrim: rgba(18,16,12,.48);
     --f-serif: "Noto Serif TC Display", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
     --f-display: "Instrument Serif", "Noto Serif TC Display", Georgia, serif;
     --f-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
@@ -117,11 +124,16 @@
       --pod-mk: #D493EA;
       --pod-statementdog: #F2A65E;
       --shadow: 0 1px 0 rgba(0,0,0,.3), 0 18px 40px -24px rgba(0,0,0,.8);
+      --copilot-shadow: -24px 0 60px -28px rgba(0,0,0,.7);
+      --copilot-seg-on: #38342D;
+      --copilot-seg-shadow: 0 1px 2px rgba(0,0,0,.4);
+      --copilot-scrim: rgba(0,0,0,.6);
       color-scheme: dark;
     }
-    /* Copilot 工作台與合規彈窗的內容大量由 JS 以內嵌樣式產生（白底輸入框、
-       深色字），深色模式下把這兩個疊層的 token 鎖回淺色，避免白底白字。 */
-    #copilot-panel, #compliance-overlay {
+    /* 合規彈窗的內容大量由 JS 以內嵌樣式產生（白底、深色字），深色模式下
+       把這個疊層的 token 鎖回淺色，避免白底白字。
+       SPEC-030 §7.7：Copilot 工作台改走深色 token，不再鎖回淺色。 */
+    #compliance-overlay {
       --paper: #F3EFE7; --paper-2: #EAE4D8; --card: #FBF9F5;
       --ink: #17140F; --ink-2: #48433A; --ink-3: #6C6558;
       --rule: #DCD4C5; --rule-2: #C4B9A4;
@@ -972,15 +984,13 @@
     color: var(--paper); background: var(--ink); border-radius: 50%;
   }
   .dd-zone-name { font-size: 12.5px; font-weight: 700; color: var(--ink); letter-spacing: .02em; }
-  .dd-zone-right { margin-left: auto; font: 500 11px var(--f-mono); color: var(--ink-3); }
-  .dd-zone-a, .dd-zone-c, .dd-zone-coverage { padding: 22px clamp(20px, 4vw, 36px) 30px; }
+  .dd-zone-a, .dd-zone-coverage { padding: 22px clamp(20px, 4vw, 36px) 30px; }
   .dd-fh, .dd-tsec-head, .dd-afh {
     font: 600 11px/1.6 var(--f-mono); letter-spacing: .1em; color: var(--ink-3); margin-bottom: 6px;
   }
   .dd-afh { display: flex; align-items: center; gap: 10px; }
   .dd-afh::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
   .dd-prose, .dd-afb { font-size: 14.5px; line-height: 1.9; color: var(--ink); }
-  .dd-afb-lg { font-family: var(--f-head); font-size: 1.15rem; font-weight: 700; line-height: 1.6; }
   .dd-field { margin-bottom: 16px; }
   .dd-name { font-family: var(--f-head); font-size: 1.25rem; font-weight: 800; margin-bottom: 4px; }
   .dd-sub { font-size: 13px; color: var(--ink-3); margin-bottom: 10px; }
@@ -1001,10 +1011,6 @@
   .dd-warn-box { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--hl); border-radius: 0 12px 12px 0; }
   .dd-box-trend { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--down); border-radius: 0 12px 12px 0; }
   .dd-box-host { background: var(--paper-2); color: var(--ink); border-left: 3px solid var(--pod-mk); border-radius: 0 12px 12px 0; }
-  .dd-capture-btn {
-    flex-shrink: 0; margin-left: auto; border: 1px solid var(--rule); background: var(--card);
-    border-radius: 999px; padding: 3px 10px; font-size: 11px; color: var(--ink-3); cursor: pointer;
-  }
   .dd-zone-b { background: var(--paper-2); }
   .dd-drift-bar { padding: 8px clamp(20px, 4vw, 36px); border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-3); font-style: italic; }
   .dd-tsec { padding: 16px clamp(20px, 4vw, 36px); }
@@ -1033,6 +1039,34 @@
   .dd-sc-body { font-size: 13.5px; color: var(--ink-2); line-height: 1.75; }
   .dd-footer-line { font-size: 12px; color: var(--ink-3); margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--rule); }
   .dd-empty { padding: 72px 24px; text-align: center; color: var(--ink-3); font-size: 14px; }
+  /* SPEC-031 §7.4：觀點對照 → 投資提醒 → 延伸解讀 → 兩個摺疊區 → 頁尾。 */
+  .dd-sec, .dd-fold, .dd-col-left > .dd-footer-line { margin: 22px clamp(20px, 4vw, 36px) 0; }
+  .dd-col-left > .dd-footer-line { margin-bottom: 28px; }
+  .dd-sec-h { margin: 0 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .06em; color: var(--ink-3); }
+  .dd-compare { display: flex; flex-direction: column; gap: 12px; }
+  .dd-host, .dd-verdict { flex: 1 1 0; min-width: 0; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; background: var(--card); }
+  .dd-host { border: 1px solid var(--rule); border-left: 4px solid var(--accent); }
+  .dd-verdict { border: 1.5px dashed var(--pod-yutinghao); }
+  .dd-host-label, .dd-verdict-label { font-size: 12px; font-weight: 700; color: var(--ink-3); }
+  .dd-host-text, .dd-verdict-row { font-size: 14px; line-height: 1.8; color: var(--ink-2); white-space: pre-line; }
+  .dd-verdict-row b { color: var(--ink); font-weight: 600; }
+  .dd-stance { width: fit-content; padding: 1px 10px; border: 1px solid; border-radius: 999px; font-size: 15px; font-weight: 700; color: var(--flat); }
+  .dd-stance[data-stance="偏多"] { color: var(--up); }
+  .dd-stance[data-stance="偏空"] { color: var(--down); }
+  .dd-stance[data-stance="多空分歧"] { color: var(--hl); }
+  .dd-stance[data-stance="資料不足"] { border-style: dashed; }
+  .dd-remind { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .dd-remind li, .dd-remind-text { margin: 0; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 12px; background: var(--card); font-size: 14px; line-height: 1.7; color: var(--ink-2); white-space: pre-line; }
+  .dd-remind li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+  .dd-remind .what { font-weight: 600; color: var(--ink); }
+  .dd-remind .when { font: 500 11.5px/1.9 var(--f-mono); color: var(--ink-3); }
+  .dd-remind .dir { grid-column: 1 / -1; }
+  .dd-fold { border: 1px solid var(--rule); border-radius: 14px; background: var(--card); overflow: hidden; }
+  .dd-fold > summary { cursor: pointer; padding: 12px 16px; font-size: 14px; font-weight: 600; }
+  .dd-fold > summary .dd-src-mono { margin-left: 8px; }
+  .dd-fold > .dd-lead { margin: 6px 16px 0; }
+  .dd-fold .dd-zone-a { padding: 14px 16px 18px; }
+  @media (min-width: 720px) { .dd-compare { flex-direction: row; align-items: flex-start; } }
   .dd-footer {
     flex-shrink: 0;
     border-top: 1px solid var(--rule);
@@ -1052,73 +1086,179 @@
   .copilot-panel {
     position: fixed;
     top: 0; right: 0; bottom: 0;
-    width: 440px;
+    width: var(--copilot-panel-w);
     max-width: 100vw;
     background: var(--card);
     color: var(--ink);
     border-left: 1px solid var(--rule);
-    box-shadow: -24px 0 60px -24px rgba(0,0,0,.35);
+    box-shadow: var(--copilot-shadow);
     z-index: 10001;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* SPEC-030 §7.9（ADR-6）：保留 style.display 的切換方式。開啟時由
+       @starting-style 的畫面外位置滑入；關閉時 body 的 copilot-panel-open
+       同步移除，allow-discrete 讓 display:none 延到滑出結束才生效。
+       不支援這兩個特性的瀏覽器直接出現／消失，功能不受影響。 */
+    transform: none;
+    transition: transform .3s var(--ease-out), display .3s allow-discrete;
   }
-  /* 桌機（≥900px）面板開啟時閱讀區收窄置中至 800px——規則併入下方既有
+  @starting-style {
+    .copilot-panel { transform: translateX(100%); }
+    .copilot-panel.copilot-panel-mobile-drawer { transform: translateY(100%); }
+  }
+  body:not(.copilot-panel-open) .copilot-panel { transform: translateX(100%); }
+  body:not(.copilot-panel-open) .copilot-panel.copilot-panel-mobile-drawer { transform: translateY(100%); }
+  /* 桌機（≥900px）面板開啟時閱讀區與閱讀器讓位——規則併入下方既有
      的 T-1101 雙欄斷點區塊，不另立第二個同斷點的規則。 */
+  /* 標題列（SPEC-030 §7.2）：主題類型、標題、額度在左，匯出與關閉在右。 */
   .copilot-panel-header {
     flex-shrink: 0;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px;
-    padding: 16px 20px 14px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    padding: 18px 20px 14px;
     border-bottom: 1px solid var(--rule);
   }
-  .copilot-panel-title { font-family: var(--f-head); font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.45; }
-  .copilot-panel-close {
-    flex-shrink: 0; width: 34px; height: 34px;
-    display: flex; align-items: center; justify-content: center;
-    border: 1px solid var(--rule-2); background: transparent; cursor: pointer;
-    border-radius: 50%; color: var(--ink); font-size: 13px;
-    transition: background .15s, color .15s;
+  .copilot-panel-kicker {
+    grid-column: 1;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; line-height: 1.6;
+    color: var(--ink-3);
   }
-  .copilot-panel-close:hover { background: var(--ink); color: var(--paper); }
+  .copilot-panel-title {
+    grid-column: 1;
+    margin-top: 4px;
+    font-family: var(--f-head); font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .copilot-panel-title.is-empty { color: var(--ink-3); font-size: 15px; font-weight: 600; }
+  .copilot-panel-actions {
+    grid-column: 2; grid-row: 1 / span 2; align-self: start;
+    display: flex; gap: 6px;
+  }
+  .copilot-icon-btn {
+    flex-shrink: 0; height: 34px; min-width: 34px; padding: 0 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--rule-2); border-radius: 999px; background: transparent;
+    color: var(--ink); font-family: var(--f-sans); font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .copilot-icon-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .copilot-panel-close { width: 34px; padding: 0; }
+  .copilot-icon-btn svg { flex-shrink: 0; }
   .copilot-panel-body {
     flex: 1;
     overflow-y: auto;
     padding: 16px 20px;
   }
-  /* 「產業全景速覽」收折工具條（spec-028 §7.4，T-2813）。收折態總高度
-     恆為標頭的 36px；**預設收折，桌機與手機一致**（Q28-C）——此處不寫
-     任何依斷點變化的規則。 */
-  .copilot-overview-toolbar {
-    border: 1px solid var(--rule);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    overflow: hidden;
+  /* 開始卡（SPEC-030 §7.3）：在對話流內目前主題段落的末端。 */
+  .copilot-start, .copilot-start-stock { margin: 16px 0; }
+  .copilot-start-card { border: 1px solid var(--rule); border-radius: 16px; background: var(--paper); padding: 18px 16px 16px; }
+  .copilot-start-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; font-weight: 700; color: var(--ink); }
+  .copilot-start-title svg { color: var(--accent); }
+  .copilot-start-desc { margin: 6px 0 16px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+  .copilot-primary-btn {
+    width: 100%; height: 44px; margin-top: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+    font-family: var(--f-sans); font-size: 14px; font-weight: 700; cursor: pointer;
   }
-  .copilot-overview-toolbar-header {
-    height: 36px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 12px;
-    cursor: pointer;
-    font-size: 12.5px; font-weight: 700; color: var(--accent);
-    background: var(--accent-soft);
-    user-select: none;
+  .copilot-primary-btn:hover:not(:disabled) { filter: brightness(1.07); }
+  .copilot-primary-btn:disabled { background: var(--rule); color: var(--ink-3); cursor: not-allowed; }
+  .copilot-start-note { margin: 10px 2px 0; font-size: 12px; line-height: 1.6; color: var(--ink-3); }
+  .copilot-start-or-ask { display: flex; align-items: center; gap: 10px; margin: 18px 0 0; font-size: 12px; color: var(--ink-3); }
+  .copilot-start-or-ask::before, .copilot-start-or-ask::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .copilot-start-or-ask span { display: inline-flex; align-items: center; gap: 4px; }
+  .copilot-start-stock { border: 1px dashed var(--rule-2); border-radius: 16px; padding: 16px; }
+  .copilot-start-hint { margin: 0; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+  #copilot-stock-options { margin-top: 14px; }
+  #copilot-stock-options .copilot-option-group:last-child { margin-bottom: 0; }
+  /* 速覽卡（SPEC-030 §7.4）。收折以內文節點的 hidden 表示；為了轉場，
+     hidden 時不用 display:none，改為列高 0fr＋visibility:hidden。 */
+  .copilot-overview-card {
+    margin: 16px 0; display: grid; grid-template-rows: auto auto 1fr;
+    border: 1px solid var(--rule); border-radius: 16px; background: var(--card); box-shadow: var(--shadow);
+    overflow: hidden; transition: grid-template-rows .24s var(--ease-out);
   }
-  .copilot-overview-toolbar-body {
-    padding: 12px;
+  .copilot-overview-card:has(> .copilot-overview-card-body[hidden]) { grid-template-rows: auto auto 0fr; }
+  .copilot-overview-card-head {
+    grid-row: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px;
+    width: 100%; padding: 14px 16px; border: 0; background: transparent;
+    color: var(--ink); font-family: var(--f-sans); text-align: left; cursor: pointer;
   }
+  .copilot-overview-card-kicker { grid-row: 1; grid-column: 1; font-size: 11px; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
+  .copilot-overview-card-title { grid-row: 2; grid-column: 1; margin-top: 4px; font-size: 15px; font-weight: 700; line-height: 1.45; }
+  .copilot-overview-card-chevron { grid-row: 1 / span 2; grid-column: 2; display: inline-flex; color: var(--ink-3); transition: transform .24s var(--ease-out); }
+  .copilot-overview-card-head[aria-expanded="false"] .copilot-overview-card-chevron { transform: rotate(-90deg); }
+  .copilot-progress { grid-row: 2; position: relative; height: 2px; background: var(--rule); overflow: hidden; }
+  .copilot-progress::after {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; background: var(--accent);
+    animation: copilot-indeterminate 1.3s var(--ease-out) infinite;
+  }
+  @keyframes copilot-indeterminate { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+  .copilot-overview-card-body { grid-row: 3; min-height: 0; overflow: hidden; transition: visibility .24s; }
+  .copilot-overview-card-body[hidden] { display: block !important; visibility: hidden; }
+  .copilot-overview-card-text { padding: 4px 16px 16px; font-size: 14.5px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .copilot-overview-card-error {
+    margin: 0 16px 16px; padding: 10px 12px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--ink); box-shadow: inset 3px 0 0 var(--accent);
+    font-size: 13px; line-height: 1.6;
+  }
+  .copilot-overview-card-foot {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; border-top: 1px solid var(--rule); background: var(--paper);
+    font-size: 12px; color: var(--ink-3);
+  }
+  .copilot-link-btn {
+    border: 0; background: none; padding: 4px 0; cursor: pointer;
+    font-family: var(--f-sans); font-size: 12px; font-weight: 600; color: var(--ink-2);
+    text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule-2);
+  }
+  .copilot-link-btn:hover { color: var(--ink); text-decoration-color: currentColor; }
+  @media (prefers-reduced-motion: reduce) {
+    .copilot-progress::after { animation: none; width: 100%; opacity: .5; }
+  }
+  /* SPEC-030 §7.5 對話：回覆列在 DOM 中排在內文之後，以 order 排到上方。 */
+  .copilot-chat-bubble { display: flex; flex-direction: column; align-items: flex-start; margin: 14px 0; }
+  .copilot-chat-bubble[data-role="user"] { align-items: flex-end; }
+  .copilot-chat-text { max-width: 100%; font-size: 14.5px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+  [data-role="user"] > .copilot-chat-text { max-width: 86%; padding: 10px 14px; border-radius: 16px 16px 4px; background: var(--paper-2); }
+  .copilot-reply-who { order: -1; align-self: stretch; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .copilot-avatar { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+  .copilot-avatar svg { width: 13px; height: 13px; }
+  .copilot-copy-btn, .copilot-send-btn { flex-shrink: 0; display: grid; place-items: center; border: 0; cursor: pointer; }
+  .copilot-copy-btn { margin-left: auto; width: 30px; height: 30px; border-radius: 8px; background: none; color: var(--ink-3); }
+  .copilot-copy-btn:hover { color: var(--ink); }
+  .copilot-system-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0; font-size: 12px; color: var(--ink-3); }
+  .copilot-system-divider::before, .copilot-system-divider::after { content: ""; flex: 1 0 16px; height: 1px; background: var(--rule); }
+  /* §7.9：新項目進場、AI 回覆的等待指示（減少動態見檔尾全域規則）。 */
+  .copilot-chat-bubble, .copilot-overview-card, .copilot-system-divider { animation: copilot-in .24s var(--ease-out); }
+  @keyframes copilot-in { from { opacity: 0; transform: translateY(6px); } }
+  [data-pending] > .copilot-chat-text:empty::before { content: ""; display: block; width: 36px; height: 8px; margin: 8px 0; border-radius: 4px; background: var(--rule-2); animation: copilot-wait 1s ease-in-out infinite alternate; }
+  @keyframes copilot-wait { to { opacity: .35; } }
   /* 第三段：固定底部 Composer 容器（spec-028 §7.2 S-2）。`flex-shrink:0`
      使其不隨 `.copilot-panel-body` 的捲動而位移。容器本身不設
-     `overflow-y`——工作台唯一的捲動軸仍是 `.copilot-panel-body`。
-     不在此處加 border-top（composer 自身已有，重複會成雙線）。 */
-  .copilot-panel-footer {
-    flex-shrink: 0;
-    padding: 0 20px 16px;
-  }
-  #copilot-panel textarea {
-    background: var(--paper); color: var(--ink); border-color: var(--rule-2) !important;
-    border-radius: 12px !important; font-family: var(--f-sans);
-  }
+     `overflow-y`——工作台唯一的捲動軸仍是 `.copilot-panel-body`。 */
+  .copilot-panel-footer { flex-shrink: 0; padding: 12px 20px 16px; border-top: 1px solid var(--rule); }
+  /* SPEC-030 §7.6 輸入區：專家鈕、字數、送出鈕在輸入框內下方一列，選單往上展開。 */
+  .copilot-composer { padding: 10px 10px 8px 14px; border: 1px solid var(--rule-2); border-radius: 18px; background: var(--paper); }
+  .copilot-composer:focus-within { border-color: var(--ink-3); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .copilot-composer textarea { display: block; width: 100%; height: 48px; max-height: 120px; padding: 2px 0; border: 0; background: none; color: var(--ink); resize: none; outline: none; font: 15px/1.6 var(--f-sans); }
+  .copilot-composer textarea::placeholder { color: var(--ink-3); }
+  .copilot-composer-bar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .copilot-composer-count { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+  .copilot-composer-count.is-max, #copilot-chat-error { color: var(--accent); }
+  #copilot-chat-error, #copilot-toast { margin-top: 8px; font-size: 12px; }
+  #copilot-toast { padding: 6px 10px; border-radius: 6px; background: var(--ink); color: var(--paper); text-align: center; }
+  .copilot-send-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); }
+  .copilot-send-btn:disabled { background: var(--rule); color: var(--ink-3); cursor: not-allowed; }
+  .copilot-persona { position: relative; min-width: 0; }
+  .copilot-persona-btn { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 32px; padding: 0 10px 0 5px; border: 1px solid var(--rule); border-radius: 999px; background: var(--card); font: 600 12px var(--f-sans); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+  .copilot-persona-list { position: absolute; left: -6px; bottom: calc(100% + 10px); z-index: 2; width: 280px; max-width: calc(100vw - 40px); padding: 6px; background: var(--card); border: 1px solid var(--rule); border-radius: 14px; box-shadow: var(--shadow); }
+  .copilot-persona-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; border-radius: 10px; background: none; color: var(--ink); font-family: var(--f-sans); text-align: left; cursor: pointer; }
+  .copilot-persona-opt:hover, .copilot-persona-opt[aria-checked="true"] { background: var(--paper); }
+  .copilot-persona-name { display: block; font-size: 13px; font-weight: 700; }
+  .copilot-persona-desc { display: block; font-size: 12px; color: var(--ink-3); }
 
   /* 手機斷點（<900px）：底部抽屜呈現，高度 86vh（spec §2.3）。判定邏輯
      在 JS 端（lite-app.js 的 `_isMobileViewport()`），這裡只負責呈現。 */
@@ -1130,6 +1270,7 @@
     height: 86vh;
     border-radius: 22px 22px 0 0;
     border-left: 0;
+    border-top: 1px solid var(--rule);
   }
   .copilot-fab {
     position: fixed;
@@ -1139,36 +1280,42 @@
     border: none;
     background: var(--ink);
     color: var(--paper);
-    font-size: 22px;
     display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow);
     cursor: pointer;
     z-index: 10001; /* 與 .copilot-panel 同層——懸浮鈕本身就是它在手機下的開啟／喚回方式。 */
   }
   .copilot-fab:hover { background: var(--accent); }
+  /* SPEC-030 §7.10 入口登入提示：疊在閱讀器與面板（10001）之上、合規彈窗（20000）之下。 */
+  .copilot-login-prompt { position: fixed; inset: 0; z-index: 10002; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--copilot-scrim); }
+  .copilot-login-card { width: 100%; max-width: 360px; padding: 24px; border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: var(--shadow); text-align: center; }
+  .copilot-login-title { margin: 0; font-family: var(--f-head); font-size: 17px; font-weight: 700; }
+  .copilot-login-desc { margin: 8px 0 18px; font-size: 13px; line-height: 1.65; color: var(--ink-2); }
+  .copilot-login-gis { display: flex; justify-content: center; min-height: 44px; }
+  .copilot-login-card .copilot-link-btn { margin-top: 12px; }
 
   /* T-2504（SPEC-025 §7.2）：個人化選項 chip。選取狀態的實際來源是
      lite-app.js 的 _copilotSelection——.is-selected 只是把狀態畫出來。 */
-  .copilot-option-group { margin-bottom: 16px; }
-  .copilot-option-label { font: 600 11px/1.6 var(--f-mono); letter-spacing: .08em; color: var(--ink-3); margin-bottom: 6px; }
-  .copilot-option-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .copilot-option-group { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .copilot-option-label { width: 56px; flex-shrink: 0; font-size: 12px; color: var(--ink-3); }
+  .copilot-option-chips { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--paper-2); }
   .copilot-chip {
-    padding: 6px 13px; border-radius: 999px;
-    border: 1px solid var(--rule-2); background: transparent;
-    font-size: 12.5px; font-weight: 600; color: var(--ink-2);
-    cursor: pointer; transition: background .12s, border-color .12s, color .12s;
+    padding: 5px 12px; border: 0; border-radius: 999px; background: transparent;
+    font-family: var(--f-sans); font-size: 13px; font-weight: 500; color: var(--ink-2);
+    cursor: pointer; transition: background .15s, color .15s;
   }
-  .copilot-chip:hover { border-color: var(--ink); color: var(--ink); }
-  .copilot-chip.is-selected { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .copilot-chip[aria-pressed="true"] { background: var(--copilot-seg-on); color: var(--ink); font-weight: 650; box-shadow: var(--copilot-seg-shadow); }
+  .copilot-chip:disabled { cursor: not-allowed; opacity: .6; }
 
   /* T-2506（SPEC-025 §7.4）：剩餘次數常駐顯示。文字與 disabled 狀態的來源
      是 lite-app.js 的 _refreshCopilotQuota()。 */
+  /* SPEC-030 §7.2：移到標題列，佔滿第三列。 */
   .copilot-quota {
-    font-size: 12.5px; color: var(--ink-2);
-    margin-bottom: 12px; padding: 8px 12px;
-    background: var(--paper-2); border-radius: 10px;
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    font-size: 12px; line-height: 1.5; color: var(--ink-3);
   }
-  .copilot-quota.is-exhausted { color: var(--up); background: var(--up-bg); }
+  .copilot-quota.is-exhausted { color: var(--accent); font-weight: 600; }
 
   /* ── 響應式 ─────────────────────────────────────────────────────── */
   @media (min-width: 640px) {
@@ -1195,16 +1342,17 @@
     .site-main {
       max-width: 1200px;
     }
-    /* T-2713（spec-027 §2.3）：面板開啟時閱讀區收窄置中至 800px（電腦端
-       雙欄）。以選擇器特異度覆蓋上面的 1200px——兩者刻意共用同一個
-       900px 斷點，不是巧合。 */
+    /* T-2713（spec-027 §2.3）：面板開啟時閱讀區收窄至 800px，在面板左側
+       的剩餘空間置中。以選擇器特異度覆蓋上面的 1200px——兩者刻意共用同一個
+       900px 斷點，不是巧合。SPEC-030 §7.8：右側讓出的寬度與面板寬度是同一個
+       變數，閱讀區右緣不會被面板蓋住。 */
     body.copilot-panel-open .site-main {
       max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
+      margin-left: max(0px, calc((100% - var(--copilot-panel-w) - 800px) / 2));
+      margin-right: var(--copilot-panel-w);
     }
-    /* 閱讀器同理：面板開著時讓出右側 440px，導讀全文不被蓋住（PRD 4.1-D）。 */
-    body.copilot-panel-open .reader { right: 440px; }
+    /* 閱讀器同理：面板開著時讓出右側面板寬度，導讀全文不被蓋住（PRD 4.1-D）。 */
+    body.copilot-panel-open .reader { right: var(--copilot-panel-w); }
     .tile--lead { grid-column: span 2; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px 40px; }
     .tile--lead .tile-main, .tile--lead .tile-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
     .tile--lead .tile-side { padding-left: 20px; margin-left: -20px; border-left: 1px solid var(--rule); padding-top: 26px; }
@@ -1449,17 +1597,23 @@
      （專家選單、Composer、對話流）由 lite-app.js 動態填入，本檔只建立
      容器骨架。 -->
 <div id="copilot-panel" class="copilot-panel" style="display:none;" aria-modal="true" role="dialog">
+  <!-- SPEC-030 §7.2：標題列。kicker 與標題由 lite-app.js 的
+       _updateCopilotContextIndicator() 依目前主題填入；匯出鈕由
+       _ensureCopilotExportButton() 插在關閉鈕之前。 -->
   <div class="copilot-panel-header">
-    <div class="copilot-panel-title" id="copilot-panel-title"><!-- 由 JS 填入：該則產業動態或個股標題 --></div>
-    <button class="copilot-panel-close" id="copilot-panel-close" aria-label="關閉">✕</button>
-  </div>
-  <div class="copilot-panel-body" id="copilot-panel-body">
-    <!-- T-2813（spec-028 §7.4）：「產業全景速覽」收折工具條由 JS 的
-         `_ensureCopilotOverviewToolbar()` 動態建立於此處（僅產業主題）。 -->
+    <div class="copilot-panel-kicker" id="copilot-panel-kicker"></div>
+    <div class="copilot-panel-title" id="copilot-panel-title"></div>
+    <div class="copilot-panel-actions">
+      <button type="button" class="copilot-icon-btn copilot-panel-close" id="copilot-panel-close" aria-label="關閉"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
     <!-- T-2506（SPEC-025 §7.4）：剩餘次數常駐顯示。預設 hidden——未登入
          時不顯示，登入後由 lite-app.js 的 _refreshCopilotQuota() 依
          GET /api/me 的結果決定文字與是否顯示。 -->
     <div class="copilot-quota" id="copilot-quota-text" hidden></div>
+  </div>
+  <div class="copilot-panel-body" id="copilot-panel-body">
+    <!-- T-2813（spec-028 §7.4）：「產業全景速覽」收折工具條由 JS 的
+         `_ensureCopilotOverviewToolbar()` 動態建立於此處（僅產業主題）。 -->
     <!-- 串流輸出區（生成鍵、報告區、錯誤區）由 JS 動態插入於此之後，
          見 lite-app.js 的 _ensureCopilotReportArea()。 -->
   </div>
@@ -1473,7 +1627,18 @@
 <!-- T-2512（SPEC-025 §7.5 手機部分）：Copilot 懸浮鈕。桌機寬度下恆為
      hidden（見 lite-app.js 的 _applyCopilotViewportMode()）；手機寬度
      下只有在面板此前已被開過時點擊才會重新開啟。 -->
-<button id="copilot-fab" class="copilot-fab" hidden aria-label="開啟 Copilot">💬</button>
+<button id="copilot-fab" class="copilot-fab" hidden aria-label="開啟 Copilot"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.5 5.5h15v10h-9l-4.5 3.5v-3.5h-1.5z"/></svg></button>
+
+<!-- SPEC-030 §7.10 入口登入提示：容器本身是遮罩；登入鈕由 lite-app.js 以 GIS 渲染。 -->
+<div id="copilot-login-prompt" class="copilot-login-prompt" role="dialog" aria-modal="true" aria-labelledby="copilot-login-title" hidden>
+  <div class="copilot-login-card">
+    <h2 class="copilot-login-title" id="copilot-login-title">登入以使用 AI 討論</h2>
+    <p class="copilot-login-desc">登入後即可產出產業速覽、向專家提問。</p>
+    <div class="copilot-login-gis" id="copilot-login-gis"></div>
+    <p class="copilot-login-desc" id="copilot-login-unavailable" hidden>登入服務暫時無法使用，請稍後再試。</p>
+    <button type="button" class="copilot-link-btn" data-action="close-copilot-login">取消</button>
+  </div>
+</div>
 
 <div class="pulse-tip" id="pulse-tip" role="tooltip" aria-hidden="true"></div>
 
